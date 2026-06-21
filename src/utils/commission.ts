@@ -39,14 +39,20 @@ export const getActualDealAmount = (record: ConsultationRecord): number => {
 
 export const recalculateCommissionAfterRefund = (
   originalCommission: number,
-  refundRecords: RefundRecord[],
+  refundData: RefundRecord[] | number,
   influencerId: string,
-  visitType: 'first' | 'second' | 'followup'
+  visitType?: 'first' | 'second' | 'followup'
 ): number => {
-  const totalRefundCommission = refundRecords.reduce((sum, ref) => {
-    return sum + calculateCommissionAmount(ref.refundAmount, influencerId, visitType)
-  }, 0)
-  return Math.round((originalCommission - totalRefundCommission) * 100) / 100
+  let totalRefundCommission = 0
+  if (typeof refundData === 'number') {
+    const rate = influencerId ? (getInfluencerById(influencerId)?.commissionRateSecond || 0.1) : 0.1
+    totalRefundCommission = refundData * rate
+  } else if (Array.isArray(refundData) && refundData.length > 0 && visitType) {
+    totalRefundCommission = refundData.reduce((sum, ref) => {
+      return sum + calculateCommissionAmount(ref.refundAmount, influencerId, visitType)
+    }, 0)
+  }
+  return Math.round(Math.max(0, originalCommission - totalRefundCommission) * 100) / 100
 }
 
 export const getVisitTypeName = (visitType: string): string => {

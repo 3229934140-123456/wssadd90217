@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { View, Text, Input, Button, Image, ScrollView } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import styles from './index.module.scss'
@@ -11,7 +11,7 @@ import { useStore } from '@/store/useStore'
 import { SourceCode, Customer, AttributionResult } from '@/types'
 import { getSourceChannelName } from '@/utils/commission'
 import { formatRate, formatAmount } from '@/utils/commission'
-import { getInfluencerById, formatFollowers } from '@/data/influencers'
+import { getInfluencerById, formatFollowers, influencers } from '@/data/influencers'
 
 type SearchType = 'phone' | 'code'
 
@@ -33,11 +33,14 @@ const RegisterPage: React.FC = () => {
   const [codeInput, setCodeInput] = useState('')
   const [searchResult, setSearchResult] = useState<{
     customers?: Customer[]
-    code?: SourceCode
+    exactCode?: SourceCode
+    influencerCodes?: SourceCode[]
     searched: boolean
+    searchKeyword?: string
   }>({ searched: false })
 
   const quickCodes = ['LZW666', 'MLRM88', 'LILY2026', 'ZHANG99']
+  const quickInfluencers = ['变美专家老王', '美丽日记小美', '医美测评Lily']
 
   const handleSearch = () => {
     if (searchType === 'phone') {
@@ -48,31 +51,93 @@ const RegisterPage: React.FC = () => {
       const results = searchByPhone(phoneInput)
       setSearchResult({ customers: results, searched: true })
     } else {
-      if (!codeInput.trim()) {
+      const keyword = codeInput.trim()
+      if (!keyword) {
         Taro.showToast({ title: '请输入口令或达人昵称', icon: 'none' })
         return
       }
-      const code = searchByCode(codeInput.trim())
-      setSearchResult({ code, searched: true })
-      if (!code) {
-        Taro.showToast({ title: '未找到对应口令，请确认后重试', icon: 'none' })
+      const result = searchByCode(keyword)
+      setSearchResult({
+        exactCode: result.exactMatch,
+        influencerCodes: result.influencerMatches,
+        searched: true,
+        searchKeyword: keyword
+      })
+      if (!result.exactMatch && result.influencerMatches.length === 0) {
+        Taro.showToast({ title: '未找到匹配结果，试试输入完整口令或达人名字', icon: 'none', duration: 2000 })
+      } else if (result.influencerMatches.length > 0 && !result.exactMatch) {
+        Taro.showToast({ title: `找到${result.influencerMatches.length}个该达人的口令`, icon: 'none' })
       }
     }
   }
 
   const handleQuickCode = (code: string) => {
     setCodeInput(code)
-    const found = searchByCode(code)
-    setSearchResult({ code: found, searched: true })
+    const result = searchByCode(code)
+    setSearchResult({ exactCode: result.exactMatch, influencerCodes: result.influencerMatches, searched: true })
+  }
+
+  const handleQuickInfluencer = (name: string) => {
+    setCodeInput(name)
+    const result = searchByCode(name)
+    setSearchResult({ exactCode: result.exactMatch, influencerCodes: result.influencerMatches, searched: true, searchKeyword: name })
+    if (result.influencerMatches.length > 0) {
+      Taro.showToast({ title: `列出${name}的${result.influencerMatches.length}个口令`, icon: 'none' })
+    }
   }
 
   const handleScanCode = () => {
-    Taro.showToast({ title: '扫码功能演示中...', icon: 'none' })
-    setTimeout(() => {
-      setCodeInput('LZW666')
-      const found = searchByCode('LZW666')
-      setSearchResult({ code: found, searched: true })
-    }, 800)
+    Taro.scanCode({
+      onlyFromCamera: false,
+      scanType: ['qrCode', 'barCode'],
+      success: (res) => {
+        console.log('扫码结果:', res)
+        const rawResult = res.result || ''
+        let parsedCode = rawResult
+        try {
+          if (rawResult.includes('=')) {
+            const params = new URLSearchParams(rawResult.split('?')[1] || rawResult)
+            parsedCode = params.get('code') || params.get('voucher') || params.get('ticket') || rawResult
+          } else if (rawResult.length > 16) {
+            const matchCode = rawResult.match(/[A-Z0-9]{6,12}/)
+            if (matchCode) parsedCode = matchCode[0]
+          }
+        } catch (e) {
+          parsedCode = rawResult
+        }
+        const keyword = parsedCode.trim().toUpperCase()
+        if (!keyword) {
+          Taro.showToast({ title: '未识别到有效内容', icon: 'none' })
+          return
+        }
+        setCodeInput(keyword)
+        const result = searchByCode(keyword)
+        if (result.exactMatch || result.influencerMatches.length > 0) {
+          setSearchResult({ exactCode: result.exactMatch, influencerCodes: result.influencerMatches, searched: true, searchKeyword: keyword })
+          Taro.showToast({ title: '核销码识别成功！', icon: 'success' })
+        } else {
+          Taro.showModal({
+            title: '扫码结果提示',
+            content: `识别到内容：${parsedCode.slice(0, 30)}${parsedCode.length > 30 ? '...' : ''}\n\n未匹配到系统中的口令或达人。是否为新顾客走自然到院渠道？`,
+            confirmText: '标记自然到院',
+            cancelText: '重新扫码',
+            success: (r) => {
+              if (r.confirm) {
+                Taro.showToast({ title: '已按自然到院处理', icon: 'success' })
+              }
+            }
+          })
+        }
+      },
+      fail: (err) => {
+        console.log('扫码失败或取消:', err)
+        if (err && String(err.errMsg || '').includes('cancel')) {
+          Taro.showToast({ title: '已取消扫码', icon: 'none' })
+        } else {
+          Taro.showToast({ title: '扫码失败，请重试', icon: 'none' })
+        }
+      }
+    })
   }
 
   const handleCheckIn = () => {
@@ -89,11 +154,14 @@ const RegisterPage: React.FC = () => {
   const handleAttributionConfirm = (result: AttributionResult, reason: string) => {
     if (conflictingCustomer) {
       confirmAttribution(conflictingCustomer.id, result, reason)
-      Taro.showToast({ title: '归因确认成功', icon: 'success' })
+      Taro.showToast({ title: '归因确认成功，列表已更新', icon: 'success' })
     }
   }
 
-  const pendingConflicts = getPendingConflicts()
+  const [pendingConflicts, setPendingConflicts] = useState<Customer[]>([])
+  useEffect(() => {
+    setPendingConflicts(getPendingConflicts())
+  }, [customers, getPendingConflicts])
 
   return (
     <View className={styles.page}>
@@ -167,11 +235,26 @@ const RegisterPage: React.FC = () => {
                 </View>
                 <View className={styles.quickCodes}>
                   <Text style={{ fontSize: 24, color: '#86909C', width: '100%', marginBottom: 8 }}>
-                    快速查询今日热门口令：
+                    🔥 今日热门口令（点击直接查询）
                   </Text>
                   {quickCodes.map(code => (
                     <View key={code} className={styles.quickCodeTag} onClick={() => handleQuickCode(code)}>
                       {code}
+                    </View>
+                  ))}
+                </View>
+                <View className={styles.quickCodes} style={{ marginTop: 16 }}>
+                  <Text style={{ fontSize: 24, color: '#86909C', width: '100%', marginBottom: 8 }}>
+                    👤 按达人名字查询（点击列出所有口令）
+                  </Text>
+                  {quickInfluencers.map(name => (
+                    <View
+                      key={name}
+                      className={styles.quickCodeTag}
+                      style={{ background: 'rgba(155,81,224,0.1)', color: '#9B51E0', border: '1px solid rgba(155,81,224,0.25)' }}
+                      onClick={() => handleQuickInfluencer(name)}
+                    >
+                      🎬 {name}
                     </View>
                   ))}
                 </View>
@@ -253,10 +336,19 @@ const RegisterPage: React.FC = () => {
                           <View className={styles.infoRow}>
                             <Text className={styles.label}>来源渠道</Text>
                             <Text className={styles.value}>
-                              {getSourceChannelName(customer.source)}
-                              {customer.influencerName && `：${customer.influencerName}`}
+                              {getSourceChannelName(customer.attribution?.channel || customer.source)}
+                              {(customer.attribution?.influencerName || customer.influencerName) &&
+                                `：${customer.attribution?.influencerName || customer.influencerName}`}
                             </Text>
                           </View>
+                          {customer.attributionReason && (
+                            <View className={styles.infoRow}>
+                              <Text className={styles.label}>归因说明</Text>
+                              <Text className={styles.value} style={{ color: '#9B51E0', fontSize: 24, lineHeight: 1.5 }}>
+                                📝 {customer.attributionReason}
+                              </Text>
+                            </View>
+                          )}
                           <View className={styles.infoRow}>
                             <Text className={styles.label}>首次到院</Text>
                             <Text className={styles.value}>{customer.firstVisitDate}</Text>
@@ -376,55 +468,118 @@ const RegisterPage: React.FC = () => {
             </PageCard>
           )}
 
-          {searchResult.searched && searchResult.code && (
+          {searchResult.searched && searchResult.searchKeyword && (
             <View>
-              <PageCard title="🎫 口令信息" extra={<Tag type="success">{searchResult.code.code}</Tag>}>
-                <View style={{ display: 'flex', alignItems: 'center', marginBottom: 24 }}>
-                  <Image
-                    src={searchResult.code.influencerAvatar}
-                    style={{ width: 88, height: 88, borderRadius: 44, marginRight: 20, border: '3px solid #fff', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
-                    mode="aspectFill"
-                  />
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 30, fontWeight: 600, color: '#1D2129', display: 'block' }}>
-                      {searchResult.code.influencerName}
+              {searchResult.influencerCodes && searchResult.influencerCodes.length > 0 && (
+                <PageCard
+                  title={`👤 "${searchResult.searchKeyword}" 相关达人有效口令（${searchResult.influencerCodes.length}个）`}
+                  extra={<Tag type="primary">点击选择</Tag>}
+                  style={{ marginBottom: 20 }}
+                >
+                  {searchResult.influencerCodes.map((c, idx) => (
+                    <View
+                      key={c.id}
+                      style={{
+                        padding: 20,
+                        marginBottom: idx < searchResult.influencerCodes!.length - 1 ? 16 : 0,
+                        background: c.status === 'active'
+                          ? 'linear-gradient(135deg, rgba(155,81,224,0.06), rgba(155,81,224,0.02))'
+                          : 'rgba(235,87,87,0.04)',
+                        borderRadius: 16,
+                        border: c.status === 'active' ? '1px solid rgba(155,81,224,0.15)' : '1px solid rgba(235,87,87,0.15)'
+                      }}
+                      onClick={() => c.status === 'active' && setSearchResult({ ...searchResult, exactCode: c })}
+                    >
+                      <View style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <View style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+                          <Image
+                            src={c.influencerAvatar}
+                            style={{ width: 64, height: 64, borderRadius: 32, marginRight: 16 }}
+                            mode="aspectFill"
+                          />
+                          <View style={{ flex: 1 }}>
+                            <Text style={{ fontSize: 28, fontWeight: 600, color: '#1D2129', display: 'flex', alignItems: 'center', gap: 8 }}>
+                              🎫 {c.code}
+                              <Tag type={c.status === 'active' ? 'success' : 'error'} style={{ marginLeft: 12 }}>
+                                {c.status === 'active' ? '有效中' : c.status === 'expired' ? '已过期' : '未启用'}
+                              </Tag>
+                            </Text>
+                            <Text style={{ fontSize: 24, color: '#86909C', marginTop: 6, display: 'block' }}>
+                              {c.influencerName} · 今日已用{c.todayUsage}次
+                            </Text>
+                          </View>
+                        </View>
+                        {c.status === 'active' && (
+                          <Tag type="primary">选这个 →</Tag>
+                        )}
+                      </View>
+                      <View style={{ marginTop: 12, paddingTop: 12, borderTop: '1px dashed rgba(0,0,0,0.06)' }}>
+                        <Text style={{ fontSize: 22, color: '#86909C', display: 'block', marginBottom: 8 }}>
+                          合作项目（{c.projectNames.length}项）· 有效期至{c.validTo}
+                        </Text>
+                        <View style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                          {c.projectNames.slice(0, 4).map(n => (
+                            <Tag key={n} type="outline">{n}</Tag>
+                          ))}
+                          {c.projectNames.length > 4 && (
+                            <Tag type="default">+{c.projectNames.length - 4}</Tag>
+                          )}
+                        </View>
+                      </View>
+                    </View>
+                  ))}
+                </PageCard>
+              )}
+
+              {searchResult.exactCode && (
+                <PageCard title="✅ 已选口令详情" extra={<Tag type="success">{searchResult.exactCode.code}</Tag>}>
+                  <View style={{ display: 'flex', alignItems: 'center', marginBottom: 24 }}>
+                    <Image
+                      src={searchResult.exactCode.influencerAvatar}
+                      style={{ width: 88, height: 88, borderRadius: 44, marginRight: 20, border: '3px solid #fff', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
+                      mode="aspectFill"
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 30, fontWeight: 600, color: '#1D2129', display: 'block' }}>
+                        {searchResult.exactCode.influencerName}
+                      </Text>
+                      <Text style={{ fontSize: 24, color: '#86909C', marginTop: 6 }}>
+                        口令有效期：{searchResult.exactCode.validFrom} ~ {searchResult.exactCode.validTo}
+                      </Text>
+                    </View>
+                    <Tag type="primary">{searchResult.exactCode.status === 'active' ? '✓ 可核销' : '已过期'}</Tag>
+                  </View>
+                  <View style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+                    <View>
+                      <Text style={{ fontSize: 24, color: '#86909C', display: 'block' }}>今日使用</Text>
+                      <Text style={{ fontSize: 32, fontWeight: 700, color: '#9B51E0', display: 'block' }}>{searchResult.exactCode.todayUsage}</Text>
+                    </View>
+                    <View>
+                      <Text style={{ fontSize: 24, color: '#86909C', display: 'block' }}>累计使用</Text>
+                      <Text style={{ fontSize: 32, fontWeight: 700, color: '#4E5969', display: 'block' }}>{searchResult.exactCode.totalUsage}</Text>
+                    </View>
+                    <View>
+                      <Text style={{ fontSize: 24, color: '#86909C', display: 'block' }}>限制门店</Text>
+                      <Text style={{ fontSize: 32, fontWeight: 700, color: '#27AE60', display: 'block' }}>{searchResult.exactCode.storeLimit.length}家</Text>
+                    </View>
+                  </View>
+                  <View style={{ marginTop: 16 }}>
+                    <Text style={{ fontSize: 26, color: '#4E5969', fontWeight: 500, display: 'block', marginBottom: 12 }}>
+                      适用合作项目：
                     </Text>
-                    <Text style={{ fontSize: 24, color: '#86909C', marginTop: 6 }}>
-                      口令有效期：{searchResult.code.validFrom} ~ {searchResult.code.validTo}
-                    </Text>
+                    <View style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                      {searchResult.exactCode.projectNames.map(name => (
+                        <Tag key={name} type="outline">{name}</Tag>
+                      ))}
+                    </View>
                   </View>
-                  <Tag type="primary">{searchResult.code.status === 'active' ? '有效' : '已过期'}</Tag>
-                </View>
-                <View style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-                  <View>
-                    <Text style={{ fontSize: 24, color: '#86909C', display: 'block' }}>今日使用</Text>
-                    <Text style={{ fontSize: 32, fontWeight: 700, color: '#9B51E0', display: 'block' }}>{searchResult.code.todayUsage}</Text>
-                  </View>
-                  <View>
-                    <Text style={{ fontSize: 24, color: '#86909C', display: 'block' }}>累计使用</Text>
-                    <Text style={{ fontSize: 32, fontWeight: 700, color: '#4E5969', display: 'block' }}>{searchResult.code.totalUsage}</Text>
-                  </View>
-                  <View>
-                    <Text style={{ fontSize: 24, color: '#86909C', display: 'block' }}>限制门店</Text>
-                    <Text style={{ fontSize: 32, fontWeight: 700, color: '#27AE60', display: 'block' }}>{searchResult.code.storeLimit.length}家</Text>
-                  </View>
-                </View>
-                <View style={{ marginTop: 16 }}>
-                  <Text style={{ fontSize: 26, color: '#4E5969', fontWeight: 500, display: 'block', marginBottom: 12 }}>
-                    适用项目：
-                  </Text>
-                  <View style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-                    {searchResult.code.projectNames.map(name => (
-                      <Tag key={name} type="outline">{name}</Tag>
-                    ))}
-                  </View>
-                </View>
-              </PageCard>
+                </PageCard>
+              )}
             </View>
           )}
         </View>
 
-        {searchResult.searched && (searchResult.customers?.length || searchResult.code) && (
+        {searchResult.searched && (searchResult.customers?.length || searchResult.exactCode) && (
           <View className={styles.actionBtns}>
             <Button className={styles.primaryBtn} onClick={handleCheckIn}>
               ✅ 确认核销并分配咨询师

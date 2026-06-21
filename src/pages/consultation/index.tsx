@@ -21,7 +21,7 @@ import { projects, getPaidProjects } from '@/data/projects'
 type TabType = 'all' | 'pending' | 'dealed' | 'partly'
 
 const ConsultationPage: React.FC = () => {
-  const { consultations, updateConsultation, addInstallment } = useStore()
+  const { consultations, updateConsultation, addInstallment, setPendingDealConsultationId, recalculateConsultationCommission } = useStore()
 
   const [activeTab, setActiveTab] = useState<TabType>('all')
   const [editingRecord, setEditingRecord] = useState<ConsultationRecord | null>(null)
@@ -76,50 +76,40 @@ const ConsultationPage: React.FC = () => {
     if (!editingRecord) return
 
     const total = parseFloat(editTotalAmount) || 0
-    const paid = parseFloat(editPaidAmount) || 0
     const addInst = parseFloat(editAddInstallment) || 0
-    const newPaid = paid + addInst
-    const newRemaining = Math.max(0, total - newPaid)
-
-    let newStatus: 'pending' | 'dealed' | 'not_dealed' | 'partly_paid' = 'pending'
-    if (editStatus === 'not_dealed') {
-      newStatus = 'not_dealed'
-    } else if (newRemaining <= 0 && newPaid > 0) {
-      newStatus = 'dealed'
-    } else if (newPaid > 0) {
-      newStatus = 'partly_paid'
-    }
+    const newStatus = editStatus as ConsultationRecord['dealStatus']
 
     const selectedProjects = paidProjects.filter(p => editProjects.includes(p.id))
     const projectNames = selectedProjects.map(p => p.name)
-    const infId = editingRecord.influencerId || ''
-    const commissionFirst = editingRecord.visitType === 'first'
-      ? calculateCommissionAmount(newPaid, infId, 'first')
-      : 0
-    const commissionSecond = editingRecord.visitType !== 'first'
-      ? calculateCommissionAmount(newPaid, infId, editingRecord.visitType)
-      : 0
 
     updateConsultation(editingRecord.id, {
       interestedProjects: editProjects,
       interestedProjectNames: projectNames,
-      dealStatus: newStatus,
+      dealStatus: newStatus === 'pending' ? editingRecord.dealStatus : newStatus,
       totalAmount: total,
-      paidAmount: newPaid,
-      remainingAmount: newRemaining,
-      notes: editNotes,
-      commissionFirst,
-      commissionSecond,
-      commissionFinal: commissionFirst + commissionSecond
+      notes: editNotes
     })
 
     if (addInst > 0) {
-      addInstallment(editingRecord.id, addInst, '手动录入')
+      addInstallment(editingRecord.id, addInst, '咨询师录入')
+    } else {
+      recalculateConsultationCommission(editingRecord.id)
     }
 
-    Taro.showToast({ title: '保存成功', icon: 'success' })
-    setShowModal(false)
-    setEditingRecord(null)
+    const needsGoDeal = (newStatus === 'dealed' || newStatus === 'partly_paid') && editingRecord.dealStatus === 'pending'
+    if (needsGoDeal) {
+      setPendingDealConsultationId(editingRecord.id)
+      Taro.showToast({ title: '跳转到成交确认', icon: 'success' })
+      setTimeout(() => {
+        setShowModal(false)
+        setEditingRecord(null)
+        Taro.switchTab({ url: '/pages/deal/index' })
+      }, 600)
+    } else {
+      Taro.showToast({ title: '保存成功', icon: 'success' })
+      setShowModal(false)
+      setEditingRecord(null)
+    }
   }
 
   const toggleProject = (projectId: string) => {

@@ -1,0 +1,530 @@
+@use '@/styles/variables.scss' as *;
+
+.page {
+  min-height: 100vh;
+  background: linear-gradient(180deg, rgba(155, 81, 224, 0.06) 0%, $color-bg-page 25%);
+  padding-bottom: 120rpx;
+}
+
+.statsRow {
+  padding: $spacing-lg $page-padding;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: $spacing-sm;
+}
+
+.statCard {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-md $spacing-xs;
+  box-shadow: $shadow-card;
+  text-align: center;
+
+  .num {
+    font-size: $font-size-xl;
+    font-weight: $font-weight-bold;
+    color: $color-primary;
+    line-height: 1.2;
+    margin-bottom: 6rpx;
+  }
+
+  &Second .num { color: $color-commission; }
+  &Third .num { color: $color-warning; }
+  &Fourth .num { color: $color-info; }
+
+  .label {
+    font-size: 20rpx;
+    color: $color-text-tertiary;
+  }
+}
+
+.tabs {
+  display: flex;
+  padding: 0 $page-padding;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-md;
+}
+
+.tab {
+  flex: 1;
+  text-align: center;
+  padding: 20rpx 0;
+  background: $color-bg-card;
+  border-radius: $radius-md;
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  font-weight: $font-weight-medium;
+  box-shadow: $shadow-card;
+  position: relative;
+
+  &Active {
+    background: linear-gradient(135deg, $color-primary 0%, $color-primary-light 100%);
+    color: $color-text-white;
+    font-weight: $font-weight-semibold;
+  }
+
+  .badge {
+    position: absolute;
+    top: 8rpx;
+    right: 16rpx;
+    min-width: 32rpx;
+    height: 32rpx;
+    line-height: 32rpx;
+    background: $color-error;
+    color: $color-text-white;
+    font-size: 20rpx;
+    border-radius: $radius-round;
+    padding: 0 8rpx;
+  }
+}
+
+.listContainer {
+  padding: 0 $page-padding;
+}
+
+.dealCard {
+  background: $color-bg-card;
+  border-radius: $radius-xl;
+  margin-bottom: $spacing-md;
+  box-shadow: $shadow-card;
+  overflow: hidden;
+  border-left: 8rpx solid $color-warning;
+
+  &Verified {
+    border-left-color: $color-commission;
+  }
+
+  &Header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: $spacing-md $spacing-lg;
+    background: linear-gradient(135deg, rgba(242, 201, 76, 0.1) 0%, rgba(242, 201, 76, 0.05) 100%);
+    border-bottom: 1px solid $color-divider;
+  }
+
+  &Verified &Header {
+    background: linear-gradient(135deg, rgba(39, 174, 96, 0.1) 0%, rgba(39, 174, 96, 0.05) 100%);
+  }
+
+  .customerInfo {
+    .name {
+      font-size: $font-size-md;
+      font-weight: $font-weight-semibold;
+      color: $color-text-primary;
+      margin-bottom: 6rpx;
+    }
+    .meta {
+      font-size: $font-size-xs;
+      color: $color-text-tertiary;
+    }
+  }
+
+  .statusBadge {
+    padding: 8rpx 20rpx;
+    border-radius: $radius-round;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    background: rgba(242, 201, 76, 0.15);
+    color: #B7791F;
+
+    &Verified {
+      background: rgba(39, 174, 96, 0.15);
+      color: $color-commission;
+    }
+  }
+
+  &Body {
+    padding: $spacing-lg;
+  }
+
+  .sectionBlock {
+    margin-bottom: $spacing-lg;
+
+    &:last-child { margin-bottom: 0; }
+  }
+
+  .sectionLabel {
+    font-size: $font-size-xs;
+    color: $color-text-tertiary;
+    margin-bottom: $spacing-sm;
+    display: flex;
+    align-items: center;
+    gap: 6rpx;
+  }
+
+  .projectList {
+    background: $color-bg-page;
+    border-radius: $radius-md;
+    padding: $spacing-sm $spacing-md;
+  }
+
+  .projectItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: $spacing-sm 0;
+    border-bottom: 1px dashed $color-border;
+
+    &:last-child { border-bottom: none; }
+
+    .name {
+      font-size: $font-size-sm;
+      color: $color-text-primary;
+      font-weight: $font-weight-medium;
+    }
+
+    .price {
+      font-size: $font-size-sm;
+      color: $color-primary;
+      font-weight: $font-weight-semibold;
+    }
+
+    .gift {
+      font-size: 22rpx;
+      color: $color-commission;
+      background: rgba(39, 174, 96, 0.1);
+      padding: 4rpx 12rpx;
+      border-radius: $radius-xs;
+      margin-left: $spacing-xs;
+    }
+  }
+
+  .amountGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: $spacing-md;
+  }
+
+  .amountItem {
+    background: $color-bg-page;
+    border-radius: $radius-md;
+    padding: $spacing-md;
+
+    .label {
+      font-size: $font-size-xs;
+      color: $color-text-tertiary;
+      margin-bottom: 6rpx;
+    }
+
+    .value {
+      font-size: $font-size-lg;
+      font-weight: $font-weight-bold;
+      color: $color-text-primary;
+    }
+
+    .totalValue { color: $color-primary; }
+    .paidValue { color: $color-commission; }
+    .remainValue { color: $color-warning; }
+    .commissionValue { color: $color-info; }
+  }
+
+  .paymentList {
+    .paymentItem {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: $spacing-sm $spacing-md;
+      background: $color-bg-page;
+      border-radius: $radius-md;
+      margin-bottom: $spacing-xs;
+
+      &:last-child { margin-bottom: 0; }
+
+      .method {
+        font-size: $font-size-sm;
+        color: $color-text-primary;
+        font-weight: $font-weight-medium;
+      }
+
+      .date {
+        font-size: $font-size-xs;
+        color: $color-text-tertiary;
+        margin-top: 4rpx;
+      }
+
+      .amount {
+        font-size: $font-size-md;
+        font-weight: $font-weight-semibold;
+        color: $color-commission;
+      }
+    }
+  }
+
+  .attributionBox {
+    background: linear-gradient(135deg, rgba(155, 81, 224, 0.08) 0%, rgba(155, 81, 224, 0.04) 100%);
+    border-radius: $radius-md;
+    padding: $spacing-md;
+    border: 1px solid $color-border-primary;
+
+    .row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: $spacing-xs;
+
+      &:last-child { margin-bottom: 0; }
+
+      .label {
+        font-size: $font-size-xs;
+        color: $color-text-tertiary;
+      }
+
+      .value {
+        font-size: $font-size-sm;
+        color: $color-text-primary;
+        font-weight: $font-weight-medium;
+      }
+
+      .influencer {
+        color: $color-primary;
+        font-weight: $font-weight-semibold;
+      }
+    }
+
+    .reason {
+      margin-top: $spacing-sm;
+      padding-top: $spacing-sm;
+      border-top: 1px dashed $color-border-primary;
+      font-size: $font-size-xs;
+      color: $color-text-secondary;
+      line-height: 1.6;
+    }
+  }
+
+  &Footer {
+    padding: $spacing-md $spacing-lg;
+    background: $color-bg-page;
+    display: flex;
+    gap: $spacing-sm;
+  }
+
+  .btn {
+    @include button-reset;
+    flex: 1;
+    height: $button-height-md;
+    border-radius: $radius-button;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8rpx;
+
+    &Secondary {
+      background: $color-bg-card;
+      color: $color-text-secondary;
+      border: 1px solid $color-border;
+    }
+
+    &Outline {
+      background: transparent;
+      color: $color-primary;
+      border: 2rpx solid $color-primary;
+    }
+
+    &Primary {
+      background: linear-gradient(135deg, $color-primary 0%, $color-primary-light 100%);
+      color: $color-text-white;
+      border: none;
+      box-shadow: 0 6rpx 18rpx rgba(155, 81, 224, 0.2);
+    }
+
+    &Success {
+      background: linear-gradient(135deg, $color-commission 0%, #2ECC71 100%);
+      color: $color-text-white;
+      border: none;
+      box-shadow: 0 6rpx 18rpx rgba(39, 174, 96, 0.2);
+    }
+
+    &:active {
+      opacity: 0.9;
+      transform: scale(0.98);
+    }
+  }
+}
+
+.editPanel {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  background: $color-bg-card;
+  border-radius: $radius-xl $radius-xl 0 0;
+  z-index: 100;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 -8rpx 32rpx rgba(0, 0, 0, 0.15);
+
+  &Header {
+    position: sticky;
+    top: 0;
+    background: $color-bg-card;
+    padding: $spacing-lg;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid $color-divider;
+    z-index: 10;
+
+    .title {
+      font-size: $font-size-lg;
+      font-weight: $font-weight-bold;
+      color: $color-text-primary;
+    }
+
+    .close {
+      width: 56rpx; height: 56rpx;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 36rpx;
+      color: $color-text-tertiary;
+      background: $color-bg-page;
+      border-radius: $radius-round;
+    }
+  }
+
+  &Body {
+    padding: $spacing-lg;
+  }
+
+  .formGroup {
+    margin-bottom: $spacing-lg;
+
+    .formLabel {
+      font-size: $font-size-sm;
+      color: $color-text-secondary;
+      font-weight: $font-weight-medium;
+      margin-bottom: $spacing-sm;
+      display: flex;
+      align-items: center;
+      gap: 6rpx;
+    }
+
+    .required::before {
+      content: '*';
+      color: $color-error;
+      margin-right: 4rpx;
+    }
+  }
+
+  .projectCheckList {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-sm;
+  }
+
+  .projectCheck {
+    padding: 16rpx 28rpx;
+    background: $color-bg-page;
+    border-radius: $radius-md;
+    border: 2rpx solid transparent;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+
+    &Checked {
+      background: $color-bg-primary-light;
+      color: $color-primary;
+      border-color: $color-border-primary;
+      font-weight: $font-weight-medium;
+    }
+  }
+
+  .inputRow {
+    display: flex;
+    gap: $spacing-md;
+    margin-bottom: $spacing-md;
+
+    .inputItem {
+      flex: 1;
+
+      .inputLabel {
+        font-size: $font-size-xs;
+        color: $color-text-tertiary;
+        margin-bottom: 8rpx;
+      }
+
+      .input {
+        width: 100%;
+        height: 88rpx;
+        background: $color-bg-page;
+        border-radius: $radius-md;
+        padding: 0 $spacing-md;
+        font-size: $font-size-md;
+        color: $color-text-primary;
+        box-sizing: border-box;
+      }
+    }
+  }
+
+  .methodList {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: $spacing-sm;
+  }
+
+  .methodOption {
+    padding: 24rpx;
+    background: $color-bg-page;
+    border-radius: $radius-md;
+    border: 2rpx solid transparent;
+    text-align: center;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+
+    &Checked {
+      background: $color-bg-primary-light;
+      color: $color-primary;
+      border-color: $color-border-primary;
+      font-weight: $font-weight-semibold;
+    }
+  }
+
+  &Footer {
+    position: sticky;
+    bottom: 0;
+    background: $color-bg-card;
+    padding: $spacing-md $spacing-lg;
+    padding-bottom: calc(#{$spacing-md} + env(safe-area-inset-bottom));
+    display: flex;
+    gap: $spacing-md;
+    border-top: 1px solid $color-divider;
+
+    .panelBtn {
+      @include button-reset;
+      flex: 1;
+      height: $button-height-lg;
+      border-radius: $radius-button;
+      font-size: $font-size-md;
+      font-weight: $font-weight-semibold;
+
+      &Secondary {
+        background: $color-bg-page;
+        color: $color-text-secondary;
+        border: 2rpx solid $color-border;
+      }
+
+      &Primary {
+        background: linear-gradient(135deg, $color-primary 0%, $color-primary-light 100%);
+        color: $color-text-white;
+        border: none;
+      }
+
+      &:active { opacity: 0.9; }
+    }
+  }
+}
+
+.mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 99;
+}
+
+.emptyHint {
+  padding: 120rpx 0;
+  text-align: center;
+  color: $color-text-tertiary;
+  font-size: $font-size-sm;
+
+  .emoji { font-size: 80rpx; margin-bottom: 24rpx; }
+}

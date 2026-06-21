@@ -2,6 +2,7 @@ export default defineAppConfig({
   pages: [
     'pages/register/index',
     'pages/consultation/index',
+    'pages/deal/index',
     'pages/commission/index',
     'pages/code/index',
     'pages/report/index'
@@ -25,6 +26,10 @@ export default defineAppConfig({
       {
         pagePath: 'pages/consultation/index',
         text: '面诊跟进'
+      },
+      {
+        pagePath: 'pages/deal/index',
+        text: '成交确认'
       },
       {
         pagePath: 'pages/commission/index',

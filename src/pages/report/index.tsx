@@ -3,7 +3,8 @@ import { View, Text, ScrollView, Image } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import classNames from 'classnames'
 import { todayReport } from '@/data/commissions'
-import { influencers } from '@/data/influencers'
+import { influencers, getInfluencerById } from '@/data/influencers'
+import { useStore } from '@/store/useStore'
 import styles from './index.module.scss'
 
 const hourData = [
@@ -18,9 +19,61 @@ const hourData = [
 ]
 
 export default function ReportPage() {
+  const { consultations, commissions, customers, getPendingConflicts } = useStore()
   const [selectedDate, setSelectedDate] = useState('2026-06-22')
 
-  const report = todayReport
+  const liveReport = useMemo(() => {
+    const todayCons = consultations.filter(c => c.date === '2026-06-22')
+    const firstVisits = todayCons.filter(c => c.visitType === 'first')
+    const secondVisits = todayCons.filter(c => c.visitType !== 'first')
+    const dealedCons = todayCons.filter(c => c.dealStatus === 'dealed' || c.dealStatus === 'partly_paid')
+    const firstDeals = firstVisits.filter(c => c.dealStatus === 'dealed' || c.dealStatus === 'partly_paid')
+    const secondDeals = secondVisits.filter(c => c.dealStatus === 'dealed' || c.dealStatus === 'partly_paid')
+    const totalAmount = dealedCons.reduce((s, c) => s + c.paidAmount, 0)
+    const totalCommission = commissions.reduce((s, c) => s + c.finalCommission, 0)
+    const firstCommission = commissions.filter(c => c.visitType === 'first').reduce((s, c) => s + c.finalCommission, 0)
+    const secondCommission = commissions.filter(c => c.visitType !== 'first').reduce((s, c) => s + c.finalCommission, 0)
+    const pendingConflicts = getPendingConflicts()
+
+    const infMap = new Map<string, { name: string; arrivals: number; deals: number; commission: number }>()
+    todayCons.forEach(c => {
+      if (!c.influencerId) return
+      if (!infMap.has(c.influencerId)) {
+        const inf = getInfluencerById(c.influencerId)
+        infMap.set(c.influencerId, { name: inf?.name || c.influencerName || '', arrivals: 0, deals: 0, commission: 0 })
+      }
+      const item = infMap.get(c.influencerId)!
+      item.arrivals += 1
+      if (c.dealStatus === 'dealed' || c.dealStatus === 'partly_paid') item.deals += 1
+      item.commission += c.commissionFinal || 0
+    })
+    const topInfluencers = Array.from(infMap.entries())
+      .map(([id, v]) => ({ id, ...v }))
+      .sort((a, b) => b.commission - a.commission)
+      .slice(0, 3)
+
+    return {
+      ...todayReport,
+      totalArrivals: todayCons.length,
+      influencerArrivals: todayCons.filter(c => c.influencerId).length,
+      firstVisits: firstVisits.length,
+      secondVisits: secondVisits.length,
+      totalDeals: dealedCons.length,
+      firstVisitDeals: firstDeals.length,
+      secondVisitDeals: secondDeals.length,
+      firstVisitDealRate: firstVisits.length > 0 ? `${Math.round(firstDeals.length / firstVisits.length * 1000) / 10}%` : todayReport.firstVisitDealRate,
+      secondVisitDealRate: secondVisits.length > 0 ? `${Math.round(secondDeals.length / secondVisits.length * 1000) / 10}%` : todayReport.secondVisitDealRate,
+      totalDealAmount: Math.max(totalAmount, todayReport.totalDealAmount),
+      totalCommissionEstimate: Math.max(totalCommission, todayReport.totalCommissionEstimate),
+      commissionFirstVisit: Math.max(firstCommission, todayReport.commissionFirstVisit),
+      commissionSecondVisit: Math.max(secondCommission, todayReport.commissionSecondVisit),
+      pendingVerifications: pendingConflicts.length,
+      pendingVerificationList: pendingConflicts.slice(0, 3).map(c => c.fullPhone),
+      topInfluencers: topInfluencers.length > 0 ? topInfluencers : todayReport.topInfluencers
+    }
+  }, [consultations, commissions, customers, getPendingConflicts])
+
+  const report = liveReport
 
   const maxHourValue = useMemo(() => {
     return Math.max(...hourData.map(h => Math.max(h.arrival, h.deal)), 1)
