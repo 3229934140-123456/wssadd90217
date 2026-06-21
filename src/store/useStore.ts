@@ -40,6 +40,7 @@ interface StoreState {
   addRefund: (consultationId: string, refund: Omit<RefundRecord, 'id' | 'date' | 'operator'>) => void
   updateTotalAmount: (consultationId: string, newTotal: number) => void
   toggleGift: (consultationId: string, hasGift: boolean, giftProjectNames?: string[]) => void
+  updateAttribution: (consultationId: string, channel: 'influencer' | 'feed' | 'walkin', influencerId?: string, influencerName?: string, reason?: string) => void
   addCommissionRecord: (record: CommissionRecord) => void
   confirmDeal: (consultationId: string) => void
   syncCommissionFromConsultation: (consultationId: string) => void
@@ -285,20 +286,21 @@ export const useStore = create<StoreState>((set, get) => ({
     set(state => {
       const consultations = state.consultations.map(c => {
         if (c.id !== consultationId) return c
-        const newRemaining = Math.max(0, newTotal - c.paidAmount)
+        const actualTotal = Math.max(newTotal, c.paidAmount)
+        const newRemaining = actualTotal - c.paidAmount
         const influencerId = c.influencerId || ''
         const commissionFirst = c.visitType === 'first'
-          ? calculateCommissionAmount(Math.min(c.paidAmount, newTotal), influencerId, 'first')
+          ? calculateCommissionAmount(c.paidAmount, influencerId, 'first')
           : 0
         const commissionSecond = c.visitType !== 'first'
-          ? calculateCommissionAmount(Math.min(c.paidAmount, newTotal), influencerId, 'second')
+          ? calculateCommissionAmount(c.paidAmount, influencerId, 'second')
           : 0
         const totalRefund = c.refundRecords.reduce((s, r) => s + r.refundAmount, 0)
         const baseCommission = commissionFirst + commissionSecond
         const commissionFinal = recalculateCommissionAfterRefund(baseCommission, totalRefund, influencerId)
         return {
           ...c,
-          totalAmount: newTotal,
+          totalAmount: actualTotal,
           remainingAmount: newRemaining,
           commissionFirst,
           commissionSecond,
@@ -321,6 +323,41 @@ export const useStore = create<StoreState>((set, get) => ({
         }
       })
     }))
+    get().syncCommissionFromConsultation(consultationId)
+  },
+
+  updateAttribution: (consultationId: string, channel: 'influencer' | 'feed' | 'walkin', influencerId?: string, influencerName?: string, reason?: string) => {
+    set(state => {
+      const consultations = state.consultations.map(c => {
+        if (c.id !== consultationId) return c
+        const safeInfId = channel === 'influencer' ? influencerId : undefined
+        const safeInfName = channel === 'influencer' ? influencerName : undefined
+        return {
+          ...c,
+          influencerId: safeInfId,
+          influencerName: safeInfName
+        }
+      })
+      const target = consultations.find(c => c.id === consultationId)
+      let customers = state.customers
+      if (target) {
+        customers = state.customers.map(cus => {
+          if (cus.id !== target.customerId) return cus
+          return {
+            ...cus,
+            source: channel,
+            influencerId: channel === 'influencer' ? influencerId : undefined,
+            influencerName: channel === 'influencer' ? influencerName : undefined,
+            attributionReason: reason || cus.attributionReason,
+            attribution: cus.attribution
+              ? { ...cus.attribution, channel, influencerId, influencerName }
+              : undefined
+          }
+        })
+      }
+      return { consultations, customers }
+    })
+    get().recalculateConsultationCommission(consultationId)
     get().syncCommissionFromConsultation(consultationId)
   },
 

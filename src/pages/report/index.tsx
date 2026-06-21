@@ -61,15 +61,15 @@ export default function ReportPage() {
       totalDeals: dealedCons.length,
       firstVisitDeals: firstDeals.length,
       secondVisitDeals: secondDeals.length,
-      firstVisitDealRate: firstVisits.length > 0 ? `${Math.round(firstDeals.length / firstVisits.length * 1000) / 10}%` : todayReport.firstVisitDealRate,
-      secondVisitDealRate: secondVisits.length > 0 ? `${Math.round(secondDeals.length / secondVisits.length * 1000) / 10}%` : todayReport.secondVisitDealRate,
-      totalDealAmount: Math.max(totalAmount, todayReport.totalDealAmount),
-      totalCommissionEstimate: Math.max(totalCommission, todayReport.totalCommissionEstimate),
-      commissionFirstVisit: Math.max(firstCommission, todayReport.commissionFirstVisit),
-      commissionSecondVisit: Math.max(secondCommission, todayReport.commissionSecondVisit),
+      firstVisitDealRate: firstVisits.length > 0 ? `${Math.round(firstDeals.length / firstVisits.length * 1000) / 10}%` : '0%',
+      secondVisitDealRate: secondVisits.length > 0 ? `${Math.round(secondDeals.length / secondVisits.length * 1000) / 10}%` : '0%',
+      totalDealAmount: totalAmount,
+      totalCommissionEstimate: totalCommission,
+      commissionFirstVisit: firstCommission,
+      commissionSecondVisit: secondCommission,
       pendingVerifications: pendingConflicts.length,
       pendingVerificationList: pendingConflicts.slice(0, 3).map(c => c.fullPhone),
-      topInfluencers: topInfluencers.length > 0 ? topInfluencers : todayReport.topInfluencers
+      topInfluencers: topInfluencers
     }
   }, [consultations, commissions, customers, getPendingConflicts])
 

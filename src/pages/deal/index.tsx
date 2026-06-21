@@ -6,7 +6,7 @@ import { useStore } from '@/store/useStore'
 import { ConsultationRecord, Project } from '@/types'
 import { formatAmount, formatRate, getVisitTypeName, getCommissionRate, getSourceChannelName } from '@/utils/commission'
 import { projects, getProjectsByIds } from '@/data/projects'
-import { getInfluencerById } from '@/data/influencers'
+import { getInfluencerById, getActiveInfluencers } from '@/data/influencers'
 import styles from './index.module.scss'
 
 type TabType = 'pending' | 'verified'
@@ -22,7 +22,8 @@ const DealPage: React.FC = () => {
     addRefund,
     confirmDeal,
     toggleGift,
-    updateTotalAmount
+    updateTotalAmount,
+    updateAttribution
   } = useStore()
 
   const [activeTab, setActiveTab] = useState<TabType>('pending')
@@ -35,6 +36,9 @@ const DealPage: React.FC = () => {
   const [editPayMethod, setEditPayMethod] = useState('微信支付')
   const [editIsGift, setEditIsGift] = useState(false)
   const [editGiftProjects, setEditGiftProjects] = useState<string[]>([])
+  const [editChannel, setEditChannel] = useState<'influencer' | 'feed' | 'walkin'>('influencer')
+  const [editInfluencerId, setEditInfluencerId] = useState('')
+  const [editAttributionReason, setEditAttributionReason] = useState('')
 
   const [refundProject, setRefundProject] = useState('')
   const [refundAmount, setRefundAmount] = useState('')
@@ -82,6 +86,13 @@ const DealPage: React.FC = () => {
     setEditPayMethod('微信支付')
     setEditIsGift(record.hasGift || false)
     setEditGiftProjects([...record.giftProjectNames])
+    const customer = customers.find(c => c.id === record.customerId)
+    const ch: 'influencer' | 'feed' | 'walkin' = customer?.attribution?.channel
+      ? customer.attribution.channel as any
+      : (customer?.source || (record.influencerId ? 'influencer' : 'walkin'))
+    setEditChannel(ch)
+    setEditInfluencerId(record.influencerId || '')
+    setEditAttributionReason(customer?.attributionReason || '')
     setPanelType('edit')
   }
 
@@ -121,20 +132,26 @@ const DealPage: React.FC = () => {
 
   const livePreview = useMemo(() => {
     if (!editingRecord) return null
-    const total = parseFloat(editTotalAmount) || 0
+    const inputTotal = parseFloat(editTotalAmount) || 0
     const addPay = parseFloat(editAddPayment) || 0
     const newPaid = editingRecord.paidAmount + addPay
-    const newRemaining = Math.max(0, total - newPaid)
-    const rate = getCommissionRate(editingRecord.influencerId || '', editingRecord.visitType)
+    const total = Math.max(inputTotal, newPaid)
+    const newRemaining = total - newPaid
+    const infId = editChannel === 'influencer' ? editInfluencerId : ''
+    const rate = getCommissionRate(infId, editingRecord.visitType)
     const commission = Math.round(newPaid * rate * 100) / 100
     return { total, addPay, newPaid, newRemaining, rate, commission }
-  }, [editingRecord, editTotalAmount, editAddPayment])
+  }, [editingRecord, editTotalAmount, editAddPayment, editChannel, editInfluencerId])
 
   const handleSaveEdit = () => {
     if (!editingRecord) return
     const newTotal = parseFloat(editTotalAmount) || 0
     const addPay = parseFloat(editAddPayment) || 0
     const projectNames = getProjectsByIds(editProjects).map(p => p.name)
+    if (editChannel === 'influencer' && !editInfluencerId) {
+      Taro.showToast({ title: '达人探店渠道需选择达人', icon: 'none' })
+      return
+    }
 
     updateConsultation(editingRecord.id, {
       interestedProjects: editProjects,
@@ -148,6 +165,15 @@ const DealPage: React.FC = () => {
     }
 
     toggleGift(editingRecord.id, editIsGift, editGiftProjects)
+
+    const selInf = getActiveInfluencers().find(i => i.id === editInfluencerId)
+    updateAttribution(
+      editingRecord.id,
+      editChannel,
+      editChannel === 'influencer' ? editInfluencerId : undefined,
+      editChannel === 'influencer' ? (selInf?.name || '') : undefined,
+      editAttributionReason || undefined
+    )
 
     Taro.showToast({ title: '修改已保存', icon: 'success' })
     closePanel()
@@ -553,6 +579,60 @@ const DealPage: React.FC = () => {
                   </View>
                 </View>
               )}
+
+              <View className={styles.formGroup}>
+                <View className={classNames(styles.formLabel, styles.required)}>🎯 归因核对</View>
+                <View className={styles.methodList}>
+                  {([
+                    { key: 'influencer', label: '🎬 达人探店' },
+                    { key: 'feed', label: '📱 信息流广告' },
+                    { key: 'walkin', label: '🚶 自然到院' }
+                  ] as Array<{key: 'influencer'|'feed'|'walkin', label: string}>).map(opt => (
+                    <View
+                      key={opt.key}
+                      className={classNames(styles.methodOption, {
+                        [styles.methodOptionChecked]: editChannel === opt.key
+                      })}
+                      onClick={() => setEditChannel(opt.key)}
+                    >
+                      {opt.label}
+                    </View>
+                  ))}
+                </View>
+              </View>
+
+              {editChannel === 'influencer' && (
+                <View className={styles.formGroup}>
+                  <View className={classNames(styles.formLabel, styles.required)}>👤 选择关联达人</View>
+                  <View className={styles.projectCheckList}>
+                    {getActiveInfluencers().map(inf => (
+                      <View
+                        key={inf.id}
+                        className={classNames(styles.projectCheck, {
+                          [styles.projectCheckChecked]: editInfluencerId === inf.id
+                        })}
+                        onClick={() => setEditInfluencerId(inf.id)}
+                      >
+                        {editInfluencerId === inf.id && '✓ '}
+                        {inf.name}
+                        <Text style={{ fontSize: 20, opacity: 0.7, marginLeft: 6 }}>
+                          首{formatRate(inf.commissionRateFirst)} / 二{formatRate(inf.commissionRateSecond)}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              <View className={styles.formGroup}>
+                <View className={styles.formLabel}>📝 归因说明（可选）</View>
+                <Input
+                  style={{ width: '100%', height: 88, background: '#F7F8FA', borderRadius: 12, padding: '0 20rpx', fontSize: 28, boxSizing: 'border-box' }}
+                  value={editAttributionReason}
+                  onInput={(e) => setEditAttributionReason(e.detail.value)}
+                  placeholder='如：同时有两个达人推荐，经顾客确认为变美专家老王'
+                />
+              </View>
 
               {livePreview && (
                 <View className={styles.formGroup}>

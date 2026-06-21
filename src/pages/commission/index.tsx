@@ -18,10 +18,20 @@ import { getInfluencerById } from '@/data/influencers'
 type TabType = 'all' | 'first' | 'second' | 'adjusted'
 
 const CommissionPage: React.FC = () => {
-  const { commissions } = useStore()
+  const { commissions, consultations } = useStore()
 
   const [activeTab, setActiveTab] = useState<TabType>('all')
   const [activeFilter, setActiveFilter] = useState<string>('all')
+
+  const getRefundInfo = (record: CommissionRecord) => {
+    const cons = consultations.find(c => c.id === record.consultationId)
+    if (!cons || cons.refundRecords.length === 0) return null
+    const totalRefund = cons.refundRecords.reduce((s, r) => s + r.refundAmount, 0)
+    const reasons = cons.refundRecords.map(r => r.reason).join('、')
+    const origCommission = record.commissionAmount
+    const adjustAmount = origCommission - record.finalCommission
+    return { totalRefund, reasons, origCommission, adjustAmount }
+  }
 
   const tabs = [
     { key: 'all', label: '全部佣金', count: commissions.length },
@@ -38,7 +48,7 @@ const CommissionPage: React.FC = () => {
     {
       key: 'adjusted',
       label: '已调整(退款)',
-      count: commissions.filter(c => c.hasRefund).length
+      count: commissions.filter(c => c.status === 'adjusted' || c.hasRefund).length
     }
   ]
 
@@ -57,7 +67,7 @@ const CommissionPage: React.FC = () => {
     } else if (activeTab === 'second') {
       list = list.filter(c => c.visitType !== 'first')
     } else if (activeTab === 'adjusted') {
-      list = list.filter(c => c.hasRefund)
+      list = list.filter(c => c.status === 'adjusted' || c.hasRefund)
     }
     if (activeFilter !== 'all') {
       list = list.filter(c => c.status === activeFilter)
@@ -73,7 +83,7 @@ const CommissionPage: React.FC = () => {
     .filter(c => c.visitType !== 'first')
     .reduce((sum, c) => sum + c.finalCommission, 0)
   const pendingCount = commissions.filter(c => c.status === 'pending').length
-  const adjustedCount = commissions.filter(c => c.hasRefund).length
+  const adjustedCount = commissions.filter(c => c.status === 'adjusted' || c.hasRefund).length
 
   const handleExport = () => {
     Taro.showModal({
@@ -93,7 +103,17 @@ const CommissionPage: React.FC = () => {
   }
 
   const handleDetail = (record: CommissionRecord) => {
-    Taro.showToast({ title: '查看佣金明细', icon: 'none' })
+    const refundInfo = getRefundInfo(record)
+    if (refundInfo) {
+      Taro.showModal({
+        title: '佣金调整明细',
+        content: `顾客：${record.customerName}\n达人：${record.influencerName}\n\n原成交佣金：${formatAmount(refundInfo.origCommission)}\n退款本金：${formatAmount(refundInfo.totalRefund)}\n调整原因：${refundInfo.reasons}\n佣金调减：${formatAmount(refundInfo.adjustAmount)}\n\n最终应计佣金：${formatAmount(record.finalCommission)}`,
+        showCancel: false,
+        confirmText: '知道了'
+      })
+    } else {
+      Taro.showToast({ title: '查看佣金明细', icon: 'none' })
+    }
   }
 
   return (
@@ -112,7 +132,7 @@ const CommissionPage: React.FC = () => {
           </View>
           <View className={styles.stat}>
             <Text className={styles.num}>{adjustedCount}</Text>
-            <Text className={styles.name}>调整笔数</Text>
+            <Text className={styles.name}>已调整</Text>
           </View>
         </View>
       </View>
@@ -159,8 +179,10 @@ const CommissionPage: React.FC = () => {
           ) : (
             filteredList.map(record => {
               const influencer = getInfluencerById(record.influencerId)
+              const refundInfo = getRefundInfo(record)
+              const isAdjusted = record.status === 'adjusted' || record.hasRefund
               return (
-                <View key={record.id} className={styles.commissionCard}>
+                <View key={record.id} className={classnames(styles.commissionCard, isAdjusted && styles.commissionCardAdjusted)}>
                   <View className={styles.commissionCardHeader}>
                     <View className={styles.influencerInfo}>
                       <Image
@@ -171,7 +193,8 @@ const CommissionPage: React.FC = () => {
                       <View className={styles.info}>
                         <Text className={styles.name}>
                           {record.influencerName}
-                          {record.hasRefund && <Text className={styles.adjustTag}>含退款调整</Text>}
+                          {isAdjusted && <Text className={styles.adjustTag}>⚠️ 已调整</Text>}
+                          {record.isGift && <Text className={styles.adjustTag} style={{ background: 'rgba(39,174,96,0.12)', color: '#27AE60' }}>含赠送</Text>}
                         </Text>
                         <Text className={styles.customer}>
                           顾客：{record.customerName} · {record.visitTypeName}
@@ -179,13 +202,15 @@ const CommissionPage: React.FC = () => {
                       </View>
                     </View>
                     <View
-                      className={styles.statusBadge}
+                      className={classnames(styles.statusBadge, isAdjusted && styles.statusBadgeAdjusted)}
                       style={{
-                        background: getCommissionStatusBgColor(record.status),
-                        color: getCommissionStatusColor(record.status)
+                        background: isAdjusted
+                          ? 'rgba(235, 87, 87, 0.12)'
+                          : getCommissionStatusBgColor(record.status),
+                        color: isAdjusted ? '#EB5757' : getCommissionStatusColor(record.status)
                       }}
                     >
-                      {record.statusName}
+                      {isAdjusted ? '已调整' : record.statusName}
                     </View>
                   </View>
 
@@ -214,42 +239,62 @@ const CommissionPage: React.FC = () => {
 
                   <View className={styles.commissionCardCommission}>
                     <View className={styles.calcRow}>
-                      <Text className={styles.label}>原始佣金</Text>
+                      <Text className={styles.label}>① 原始成交佣金</Text>
                       <Text className={styles.value}>{formatAmount(record.commissionAmount)}</Text>
                     </View>
-                    {record.hasRefund && (
-                      <View className={classnames(styles.calcRow, styles.calcRowRefund)}>
-                        <Text className={styles.label}>
-                          退款/改项目扣减（{record.refundAdjustAmount > 0 ? '原因：项目变更' : ''}）
-                        </Text>
-                        <Text className={styles.value}>-{formatAmount(record.refundAdjustAmount)}</Text>
-                      </View>
+                    {isAdjusted && refundInfo && (
+                      <>
+                        <View className={classnames(styles.calcRow, styles.calcRowRefund)}>
+                          <Text className={styles.label}>
+                            ② 退款原因：{refundInfo.reasons}
+                          </Text>
+                          <Text className={styles.value} style={{ color: '#EB5757' }}>
+                            退款 {formatAmount(refundInfo.totalRefund)}
+                          </Text>
+                        </View>
+                        <View className={classnames(styles.calcRow, styles.calcRowRefund)}>
+                          <Text className={styles.label}>
+                            ③ 佣金调整（按退款比例）
+                          </Text>
+                          <Text className={styles.value} style={{ color: '#EB5757', fontWeight: 'bold' }}>
+                            -{formatAmount(refundInfo.adjustAmount)}
+                          </Text>
+                        </View>
+                      </>
                     )}
                     {record.isGift && (
                       <View className={styles.calcRow} style={{ opacity: 0.7 }}>
                         <Text className={styles.label}>赠送项目不计佣金</Text>
-                        <Text className={styles.value}>已扣除</Text>
+                        <Text className={styles.value}>已按规则扣除</Text>
                       </View>
                     )}
                     <View className={classnames(styles.calcRow, styles.calcRowTotal)}>
-                      <Text className={styles.label}>最终应计佣金</Text>
-                      <Text className={styles.value}>{formatAmount(record.finalCommission)}</Text>
+                      <Text className={styles.label}>
+                        {isAdjusted ? '④ 最终应计佣金' : '② 最终应计佣金'}
+                      </Text>
+                      <Text className={classnames(styles.value, isAdjusted && styles.valueAdjusted)}>
+                        {formatAmount(record.finalCommission)}
+                      </Text>
                     </View>
                   </View>
 
-                  {record.notes && (
+                  {isAdjusted && refundInfo && (
                     <View
                       style={{
-                        background: '#FFF8E1',
+                        background: 'rgba(235,87,87,0.06)',
                         borderRadius: 12,
                         padding: 16,
                         marginBottom: 20,
                         fontSize: 24,
-                        color: '#B7950B',
-                        lineHeight: 1.6
+                        color: '#86909C',
+                        lineHeight: 1.6,
+                        border: '1px solid rgba(235,87,87,0.15)'
                       }}
                     >
-                      📝 {record.notes}
+                      � <Text style={{ color: '#EB5757', fontWeight: 500 }}>佣金调整说明：</Text>
+                      该笔成交因「{refundInfo.reasons}」已退款 {formatAmount(refundInfo.totalRefund)}，
+                      对应佣金从 {formatAmount(refundInfo.origCommission)} 调整为 {formatAmount(record.finalCommission)}，
+                      调减金额 {formatAmount(refundInfo.adjustAmount)} 已自动从达人预估佣金中扣除。
                     </View>
                   )}
 
@@ -258,7 +303,7 @@ const CommissionPage: React.FC = () => {
                       className={classnames(styles.btn, styles.btnSecondary)}
                       onClick={() => handleDetail(record)}
                     >
-                      查看明细
+                      {isAdjusted ? '📋 查看调整明细' : '查看明细'}
                     </Button>
                     {record.status === 'pending' && (
                       <Button

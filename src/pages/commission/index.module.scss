@@ -177,6 +177,11 @@
   margin-bottom: $spacing-md;
   box-shadow: $shadow-card;
 
+  &Adjusted {
+    border: 2rpx solid rgba(235, 87, 87, 0.3);
+    background: linear-gradient(180deg, rgba(235,87,87,0.04) 0%, $color-bg-card 100%);
+  }
+
   &Header {
     display: flex;
     align-items: center;
@@ -222,6 +227,11 @@
     border-radius: $radius-round;
     font-size: $font-size-xs;
     font-weight: $font-weight-medium;
+
+    &Adjusted {
+      border: 1px solid rgba(235, 87, 87, 0.2);
+      font-weight: $font-weight-semibold;
+    }
   }
 
   &Body {
@@ -288,6 +298,10 @@
     .value {
       font-size: $font-size-xl;
       font-weight: $font-weight-bold;
+    }
+
+    .valueAdjusted {
+      color: $color-refund;
     }
   }
 
