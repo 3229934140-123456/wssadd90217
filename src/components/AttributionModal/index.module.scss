@@ -1,0 +1,205 @@
+@use '@/styles/variables.scss' as *;
+
+.modalMask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  padding: 0 $spacing-lg;
+}
+
+.modal {
+  width: 100%;
+  background: $color-bg-card;
+  border-radius: $radius-xl;
+  overflow: hidden;
+  box-shadow: $shadow-popup;
+
+  &Header {
+    padding: $spacing-lg $spacing-lg $spacing-md;
+    text-align: center;
+    border-bottom: 1px solid $color-divider;
+
+    .title {
+      font-size: $font-size-xl;
+      font-weight: $font-weight-semibold;
+      color: $color-text-primary;
+    }
+
+    .subtitle {
+      margin-top: $spacing-xs;
+      font-size: $font-size-sm;
+      color: $color-text-secondary;
+      line-height: $line-height-normal;
+    }
+  }
+
+  &Body {
+    padding: $spacing-lg;
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+
+  &Footer {
+    padding: $spacing-md $spacing-lg $spacing-lg;
+    display: flex;
+    gap: $spacing-md;
+  }
+}
+
+.customerInfo {
+  background: $color-bg-primary-light;
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  margin-bottom: $spacing-lg;
+
+  .row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6rpx 0;
+
+    .label {
+      font-size: $font-size-sm;
+      color: $color-text-tertiary;
+    }
+
+    .value {
+      font-size: $font-size-md;
+      color: $color-text-primary;
+      font-weight: $font-weight-medium;
+    }
+  }
+}
+
+.optionCard {
+  border: 2px solid $color-border;
+  border-radius: $radius-md;
+  padding: $spacing-lg;
+  margin-bottom: $spacing-md;
+  cursor: pointer;
+  transition: all $transition-base;
+
+  &Active {
+    border-color: $color-primary;
+    background: $color-bg-primary-light;
+  }
+
+  .optionHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: $spacing-sm;
+
+    .optionTitle {
+      font-size: $font-size-lg;
+      font-weight: $font-weight-semibold;
+      color: $color-text-primary;
+    }
+
+    .checkIcon {
+      width: 40rpx;
+      height: 40rpx;
+      border-radius: $radius-round;
+      border: 2px solid $color-border;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+
+      &.checked {
+        background: $color-primary;
+        border-color: $color-primary;
+        color: white;
+        font-size: 24rpx;
+        line-height: 1;
+      }
+    }
+  }
+
+  .optionDesc {
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    line-height: $line-height-normal;
+  }
+
+  .optionDetails {
+    margin-top: $spacing-sm;
+    padding-top: $spacing-sm;
+    border-top: 1px dashed $color-border;
+    font-size: $font-size-sm;
+    color: $color-text-tertiary;
+  }
+}
+
+.reasonSection {
+  margin-top: $spacing-lg;
+
+  .label {
+    font-size: $font-size-md;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+    margin-bottom: $spacing-sm;
+  }
+
+  .required {
+    color: $color-error;
+    margin-left: 4rpx;
+  }
+
+  .textarea {
+    width: 100%;
+    min-height: 160rpx;
+    padding: $spacing-md;
+    background: $color-bg-page;
+    border-radius: $radius-md;
+    border: 1px solid $color-border;
+    font-size: $font-size-md;
+    color: $color-text-primary;
+    line-height: $line-height-normal;
+    box-sizing: border-box;
+  }
+
+  .hint {
+    margin-top: $spacing-xs;
+    font-size: $font-size-xs;
+    color: $color-text-tertiary;
+  }
+}
+
+.btn {
+  @include button-reset;
+  flex: 1;
+  height: $button-height-md;
+  border-radius: $radius-button;
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  transition: all $transition-base;
+
+  &Cancel {
+    background: $color-bg-hover;
+    color: $color-text-secondary;
+    border: 1px solid $color-border;
+  }
+
+  &Confirm {
+    background: linear-gradient(135deg, $color-primary 0%, $color-primary-light 100%);
+    color: $color-text-white;
+    border: none;
+
+    &:disabled {
+      opacity: 0.5;
+    }
+  }
+
+  &:active {
+    opacity: 0.9;
+    transform: scale(0.98);
+  }
+}

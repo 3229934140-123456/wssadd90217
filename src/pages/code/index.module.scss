@@ -1,0 +1,407 @@
+@use '@/styles/variables.scss' as *;
+
+.page {
+  min-height: 100vh;
+  background: linear-gradient(180deg, rgba(155, 81, 224, 0.06) 0%, $color-bg-page 25%);
+  padding-bottom: 40rpx;
+}
+
+.searchBar {
+  margin: $spacing-lg $page-padding;
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-sm $spacing-md;
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  box-shadow: $shadow-card;
+
+  .searchIcon {
+    font-size: 32rpx;
+    color: $color-text-tertiary;
+  }
+
+  .input {
+    flex: 1;
+    height: 56rpx;
+    font-size: $font-size-sm;
+    color: $color-text-primary;
+  }
+
+  .searchBtn {
+    @include button-reset;
+    padding: 12rpx 28rpx;
+    background: linear-gradient(135deg, $color-primary 0%, $color-primary-light 100%);
+    color: $color-text-white;
+    border-radius: $radius-round;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+  }
+}
+
+.statsRow {
+  padding: 0 $page-padding;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: $spacing-md;
+  margin-bottom: $spacing-lg;
+}
+
+.statCard {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-md;
+  box-shadow: $shadow-card;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+
+  &:before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 6rpx;
+    background: linear-gradient(90deg, $color-primary 0%, $color-primary-light 100%);
+  }
+
+  .num {
+    font-size: 44rpx;
+    font-weight: $font-weight-bold;
+    color: $color-primary;
+    line-height: 1.2;
+    margin-bottom: 8rpx;
+  }
+
+  &Second .num {
+    color: $color-info;
+  }
+
+  &Third .num {
+    color: $color-commission;
+  }
+
+  .label {
+    font-size: $font-size-xs;
+    color: $color-text-tertiary;
+  }
+}
+
+.tabs {
+  display: flex;
+  padding: 0 $page-padding;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-md;
+  overflow-x: auto;
+}
+
+.tab {
+  flex-shrink: 0;
+  padding: 16rpx 32rpx;
+  background: $color-bg-card;
+  border-radius: $radius-round;
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  font-weight: $font-weight-medium;
+  box-shadow: $shadow-card;
+  position: relative;
+
+  &Active {
+    background: linear-gradient(135deg, $color-primary 0%, $color-primary-light 100%);
+    color: $color-text-white;
+    font-weight: $font-weight-semibold;
+  }
+
+  .badge {
+    position: absolute;
+    top: -8rpx;
+    right: -8rpx;
+    min-width: 32rpx;
+    height: 32rpx;
+    line-height: 32rpx;
+    text-align: center;
+    background: $color-error;
+    color: $color-text-white;
+    font-size: 20rpx;
+    border-radius: $radius-round;
+    padding: 0 8rpx;
+  }
+}
+
+.listContainer {
+  padding: 0 $page-padding;
+}
+
+.codeCard {
+  background: $color-bg-card;
+  border-radius: $radius-xl;
+  margin-bottom: $spacing-md;
+  box-shadow: $shadow-card;
+  overflow: hidden;
+
+  &Header {
+    display: flex;
+    align-items: center;
+    padding: $spacing-md $spacing-lg;
+    background: linear-gradient(135deg, rgba(155, 81, 224, 0.04) 0%, rgba(155, 81, 224, 0.08) 100%);
+    border-bottom: 1px solid $color-divider;
+  }
+
+  .avatar {
+    width: 80rpx;
+    height: 80rpx;
+    border-radius: $radius-round;
+    margin-right: $spacing-md;
+    border: 3rpx solid #fff;
+    box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1);
+  }
+
+  .influencerInfo {
+    flex: 1;
+
+    .name {
+      font-size: $font-size-md;
+      font-weight: $font-weight-semibold;
+      color: $color-text-primary;
+      margin-bottom: 6rpx;
+      display: flex;
+      align-items: center;
+      gap: $spacing-xs;
+    }
+
+    .platform {
+      font-size: $font-size-xs;
+      color: $color-text-tertiary;
+    }
+  }
+
+  .statusBadge {
+    padding: 10rpx 24rpx;
+    border-radius: $radius-round;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+
+    &Active {
+      background: rgba(39, 174, 96, 0.12);
+      color: $color-success;
+    }
+
+    &Expired {
+      background: rgba(235, 87, 87, 0.12);
+      color: $color-error;
+    }
+
+    &Unused {
+      background: rgba(47, 128, 237, 0.12);
+      color: $color-info;
+    }
+  }
+
+  &Body {
+    padding: $spacing-lg;
+  }
+
+  .codeBox {
+    background: linear-gradient(135deg, $color-primary 0%, $color-primary-light 100%);
+    border-radius: $radius-lg;
+    padding: $spacing-lg;
+    text-align: center;
+    margin-bottom: $spacing-lg;
+    position: relative;
+    overflow: hidden;
+
+    &:before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -30%;
+      width: 200rpx;
+      height: 200rpx;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: $radius-round;
+    }
+
+    .label {
+      font-size: $font-size-xs;
+      color: rgba(255, 255, 255, 0.85);
+      margin-bottom: $spacing-sm;
+      position: relative;
+      z-index: 1;
+    }
+
+    .codeText {
+      font-size: 64rpx;
+      font-weight: $font-weight-bold;
+      color: $color-text-white;
+      letter-spacing: 8rpx;
+      position: relative;
+      z-index: 1;
+      margin-bottom: $spacing-sm;
+    }
+
+    .copyHint {
+      font-size: $font-size-xs;
+      color: rgba(255, 255, 255, 0.7);
+      position: relative;
+      z-index: 1;
+    }
+  }
+
+  .infoGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: $spacing-md $spacing-lg;
+    margin-bottom: $spacing-lg;
+  }
+
+  .infoItem {
+    .label {
+      font-size: $font-size-xs;
+      color: $color-text-tertiary;
+      margin-bottom: 6rpx;
+    }
+
+    .value {
+      font-size: $font-size-sm;
+      color: $color-text-primary;
+      font-weight: $font-weight-medium;
+    }
+
+    .valueWarn {
+      color: $color-warning;
+    }
+
+    .valueError {
+      color: $color-error;
+    }
+
+    .valueSuccess {
+      color: $color-success;
+    }
+  }
+
+  .projectsSection {
+    margin-bottom: $spacing-lg;
+
+    .sectionLabel {
+      font-size: $font-size-xs;
+      color: $color-text-tertiary;
+      margin-bottom: $spacing-sm;
+    }
+
+    .projectTags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: $spacing-xs;
+    }
+
+    .projectTag {
+      padding: 8rpx 20rpx;
+      background: $color-bg-primary-light;
+      color: $color-primary;
+      border-radius: $radius-round;
+      font-size: $font-size-xs;
+      font-weight: $font-weight-medium;
+    }
+  }
+
+  .storeSection {
+    margin-bottom: $spacing-lg;
+    padding: $spacing-md;
+    background: rgba(47, 128, 237, 0.06);
+    border-radius: $radius-md;
+    border: 1px solid rgba(47, 128, 237, 0.15);
+
+    .storeLabel {
+      font-size: $font-size-xs;
+      color: $color-info;
+      font-weight: $font-weight-medium;
+      margin-bottom: 6rpx;
+      display: flex;
+      align-items: center;
+      gap: 6rpx;
+    }
+
+    .storeText {
+      font-size: $font-size-xs;
+      color: $color-text-secondary;
+    }
+  }
+
+  .usageBar {
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+    padding: $spacing-md;
+    background: $color-bg-page;
+    border-radius: $radius-md;
+    margin-bottom: $spacing-lg;
+
+    .usageItem {
+      flex: 1;
+      text-align: center;
+
+      .num {
+        font-size: $font-size-lg;
+        font-weight: $font-weight-bold;
+        color: $color-primary;
+        line-height: 1.2;
+        margin-bottom: 4rpx;
+      }
+
+      .label {
+        font-size: $font-size-xs;
+        color: $color-text-tertiary;
+      }
+    }
+
+    .divider {
+      width: 1px;
+      height: 60rpx;
+      background: $color-border;
+    }
+  }
+
+  &Footer {
+    display: flex;
+    gap: $spacing-sm;
+    padding: 0 $spacing-lg $spacing-lg;
+  }
+
+  .btn {
+    @include button-reset;
+    flex: 1;
+    height: $button-height-md;
+    border-radius: $radius-button;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8rpx;
+
+    &Secondary {
+      background: $color-bg-hover;
+      color: $color-text-secondary;
+      border: 1px solid $color-border;
+    }
+
+    &Outline {
+      background: transparent;
+      color: $color-primary;
+      border: 2rpx solid $color-primary;
+    }
+
+    &Primary {
+      background: linear-gradient(135deg, $color-primary 0%, $color-primary-light 100%);
+      color: $color-text-white;
+      border: none;
+    }
+
+    &:active {
+      opacity: 0.9;
+      transform: scale(0.98);
+    }
+  }
+}

@@ -1,0 +1,595 @@
+@use '@/styles/variables.scss' as *;
+
+.page {
+  min-height: 100vh;
+  background: linear-gradient(180deg, rgba(155, 81, 224, 0.08) 0%, $color-bg-page 30%);
+  padding-bottom: 120rpx;
+}
+
+.headerSection {
+  margin: $spacing-lg $page-padding;
+  background: linear-gradient(135deg, $color-primary 0%, $color-primary-dark 50%, #6A3FB8 100%);
+  border-radius: $radius-xl;
+  padding: $spacing-xl $spacing-lg;
+  box-shadow: 0 16rpx 40rpx rgba(155, 81, 224, 0.3);
+  color: $color-text-white;
+  position: relative;
+  overflow: hidden;
+
+  &:before {
+    content: '';
+    position: absolute;
+    right: -60rpx;
+    top: -60rpx;
+    width: 260rpx;
+    height: 260rpx;
+    border-radius: $radius-round;
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  &:after {
+    content: '';
+    position: absolute;
+    left: -40rpx;
+    bottom: -80rpx;
+    width: 180rpx;
+    height: 180rpx;
+    border-radius: $radius-round;
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  .topBar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: $spacing-lg;
+    position: relative;
+    z-index: 1;
+  }
+
+  .storeInfo {
+    .storeName {
+      font-size: $font-size-lg;
+      font-weight: $font-weight-bold;
+      margin-bottom: 6rpx;
+      display: flex;
+      align-items: center;
+      gap: $spacing-xs;
+    }
+
+    .dateText {
+      font-size: $font-size-sm;
+      opacity: 0.85;
+    }
+  }
+
+  .datePicker {
+    padding: 10rpx 24rpx;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: $radius-round;
+    font-size: $font-size-sm;
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    gap: 8rpx;
+  }
+
+  .heroAmount {
+    text-align: center;
+    margin-bottom: $spacing-xl;
+    position: relative;
+    z-index: 1;
+
+    .label {
+      font-size: $font-size-sm;
+      opacity: 0.85;
+      margin-bottom: $spacing-sm;
+    }
+
+    .amount {
+      font-size: 72rpx;
+      font-weight: $font-weight-bold;
+      line-height: 1.1;
+      margin-bottom: $spacing-xs;
+      text-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.15);
+    }
+
+    .subText {
+      font-size: $font-size-xs;
+      opacity: 0.75;
+    }
+  }
+
+  .heroStats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: $spacing-sm;
+    position: relative;
+    z-index: 1;
+  }
+
+  .heroStat {
+    text-align: center;
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: $radius-md;
+    padding: $spacing-md $spacing-xs;
+    backdrop-filter: blur(10px);
+
+    .num {
+      font-size: $font-size-xl;
+      font-weight: $font-weight-bold;
+      line-height: 1.2;
+      margin-bottom: 4rpx;
+    }
+
+    .name {
+      font-size: 20rpx;
+      opacity: 0.85;
+    }
+  }
+}
+
+.section {
+  margin: 0 $page-padding $spacing-md;
+}
+
+.sectionTitle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-md;
+
+  .title {
+    font-size: $font-size-md;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+  }
+
+  .action {
+    font-size: $font-size-xs;
+    color: $color-primary;
+    font-weight: $font-weight-medium;
+  }
+}
+
+.rateCards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $spacing-md;
+  margin-bottom: $spacing-md;
+}
+
+.rateCard {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+  position: relative;
+  overflow: hidden;
+
+  &:before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 8rpx;
+    background: linear-gradient(90deg, $color-primary 0%, $color-primary-light 100%);
+  }
+
+  &Second:before {
+    background: linear-gradient(90deg, $color-info 0%, #5DADE2 100%);
+  }
+
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: $spacing-md;
+  }
+
+  .label {
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    font-weight: $font-weight-medium;
+  }
+
+  .trend {
+    padding: 6rpx 14rpx;
+    border-radius: $radius-round;
+    font-size: 22rpx;
+    font-weight: $font-weight-semibold;
+    background: rgba(39, 174, 96, 0.12);
+    color: $color-success;
+  }
+
+  .trendDown {
+    background: rgba(235, 87, 87, 0.12);
+    color: $color-error;
+  }
+
+  .rate {
+    font-size: 56rpx;
+    font-weight: $font-weight-bold;
+    color: $color-primary;
+    line-height: 1.1;
+    margin-bottom: $spacing-sm;
+  }
+
+  &Second .rate {
+    color: $color-info;
+  }
+
+  .detail {
+    font-size: $font-size-xs;
+    color: $color-text-tertiary;
+  }
+
+  .detail strong {
+    color: $color-text-primary;
+    font-weight: $font-weight-semibold;
+  }
+}
+
+.commissionCards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $spacing-md;
+  margin-bottom: $spacing-md;
+}
+
+.commissionCard {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+
+  .label {
+    font-size: $font-size-xs;
+    color: $color-text-tertiary;
+    margin-bottom: $spacing-sm;
+    display: flex;
+    align-items: center;
+    gap: 6rpx;
+  }
+
+  .amount {
+    font-size: 40rpx;
+    font-weight: $font-weight-bold;
+    color: $color-commission;
+    line-height: 1.2;
+    margin-bottom: 6rpx;
+  }
+
+  .percent {
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+  }
+
+  .percentBar {
+    height: 8rpx;
+    background: $color-divider;
+    border-radius: $radius-round;
+    margin-top: $spacing-sm;
+    overflow: hidden;
+
+    .fill {
+      height: 100%;
+      background: linear-gradient(90deg, $color-commission 0%, #2ECC71 100%);
+      border-radius: $radius-round;
+    }
+  }
+}
+
+.rankCard {
+  background: $color-bg-card;
+  border-radius: $radius-xl;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+  margin-bottom: $spacing-md;
+}
+
+.rankItem {
+  display: flex;
+  align-items: center;
+  padding: $spacing-md 0;
+  border-bottom: 1px solid $color-divider;
+
+  &:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  &:first-child {
+    padding-top: 0;
+  }
+
+  .rankNum {
+    width: 56rpx;
+    height: 56rpx;
+    border-radius: $radius-round;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    margin-right: $spacing-md;
+    flex-shrink: 0;
+    background: $color-bg-page;
+    color: $color-text-tertiary;
+  }
+
+  .rank1 {
+    background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+    color: #fff;
+    box-shadow: 0 4rpx 12rpx rgba(255, 165, 0, 0.3);
+  }
+
+  .rank2 {
+    background: linear-gradient(135deg, #C0C0C0 0%, #A8A8A8 100%);
+    color: #fff;
+    box-shadow: 0 4rpx 12rpx rgba(168, 168, 168, 0.3);
+  }
+
+  .rank3 {
+    background: linear-gradient(135deg, #CD7F32 0%, #B87333 100%);
+    color: #fff;
+    box-shadow: 0 4rpx 12rpx rgba(184, 115, 51, 0.3);
+  }
+
+  .avatar {
+    width: 72rpx;
+    height: 72rpx;
+    border-radius: $radius-round;
+    margin-right: $spacing-md;
+    border: 2rpx solid #fff;
+    box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
+    flex-shrink: 0;
+  }
+
+  .info {
+    flex: 1;
+    min-width: 0;
+
+    .name {
+      font-size: $font-size-md;
+      font-weight: $font-weight-semibold;
+      color: $color-text-primary;
+      margin-bottom: 6rpx;
+      display: flex;
+      align-items: center;
+      gap: $spacing-xs;
+    }
+
+    .meta {
+      font-size: $font-size-xs;
+      color: $color-text-tertiary;
+      display: flex;
+      gap: $spacing-md;
+    }
+  }
+
+  .commission {
+    text-align: right;
+    flex-shrink: 0;
+
+    .amount {
+      font-size: $font-size-lg;
+      font-weight: $font-weight-bold;
+      color: $color-commission;
+      line-height: 1.2;
+      margin-bottom: 4rpx;
+    }
+
+    .label {
+      font-size: 20rpx;
+      color: $color-text-tertiary;
+    }
+  }
+}
+
+.alertCard {
+  background: $color-bg-card;
+  border-radius: $radius-xl;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+  margin-bottom: $spacing-md;
+  border-left: 8rpx solid $color-warning;
+
+  .alertHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: $spacing-md;
+
+    .title {
+      font-size: $font-size-md;
+      font-weight: $font-weight-semibold;
+      color: $color-text-primary;
+      display: flex;
+      align-items: center;
+      gap: $spacing-xs;
+    }
+
+    .count {
+      padding: 8rpx 20rpx;
+      background: rgba(242, 201, 76, 0.15);
+      color: #B7791F;
+      border-radius: $radius-round;
+      font-size: $font-size-xs;
+      font-weight: $font-weight-semibold;
+    }
+  }
+
+  .alertList {
+    .alertItem {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: $spacing-md;
+      background: rgba(242, 201, 76, 0.06);
+      border-radius: $radius-md;
+      margin-bottom: $spacing-sm;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+
+      .phone {
+        font-size: $font-size-md;
+        font-weight: $font-weight-semibold;
+        color: $color-text-primary;
+      }
+
+      .time {
+        font-size: $font-size-xs;
+        color: $color-text-tertiary;
+        margin-top: 4rpx;
+      }
+
+      .handleBtn {
+        padding: 12rpx 28rpx;
+        background: linear-gradient(135deg, $color-warning 0%, #F5B041 100%);
+        color: #fff;
+        border-radius: $radius-round;
+        font-size: $font-size-xs;
+        font-weight: $font-weight-semibold;
+      }
+    }
+  }
+}
+
+.hourlyCard {
+  background: $color-bg-card;
+  border-radius: $radius-xl;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+  margin-bottom: $spacing-md;
+
+  .chartArea {
+    height: 240rpx;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 8rpx;
+    margin: $spacing-lg 0 $spacing-md;
+    padding: 0 $spacing-xs;
+
+    .barGroup {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: $spacing-xs;
+    }
+
+    .bars {
+      display: flex;
+      gap: 4rpx;
+      align-items: flex-end;
+      height: 180rpx;
+    }
+
+    .bar {
+      width: 16rpx;
+      border-radius: 8rpx 8rpx 0 0;
+      min-height: 8rpx;
+    }
+
+    .barArrival {
+      background: linear-gradient(180deg, $color-primary 0%, $color-primary-light 100%);
+    }
+
+    .barDeal {
+      background: linear-gradient(180deg, $color-commission 0%, #2ECC71 100%);
+    }
+
+    .hourLabel {
+      font-size: 20rpx;
+      color: $color-text-tertiary;
+    }
+  }
+
+  .legend {
+    display: flex;
+    justify-content: center;
+    gap: $spacing-xl;
+
+    .legendItem {
+      display: flex;
+      align-items: center;
+      gap: $spacing-xs;
+      font-size: $font-size-xs;
+      color: $color-text-secondary;
+
+      .dot {
+        width: 20rpx;
+        height: 20rpx;
+        border-radius: $radius-xs;
+      }
+
+      .dotArrival {
+        background: $color-primary;
+      }
+
+      .dotDeal {
+        background: $color-commission;
+      }
+    }
+  }
+}
+
+.bottomBar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: $color-bg-card;
+  padding: $spacing-md $page-padding;
+  padding-bottom: calc(#{$spacing-md} + env(safe-area-inset-bottom));
+  box-shadow: 0 -4rpx 24rpx rgba(0, 0, 0, 0.08);
+  display: flex;
+  gap: $spacing-md;
+  z-index: 10;
+
+  .btn {
+    @include button-reset;
+    flex: 1;
+    height: $button-height-lg;
+    border-radius: $radius-button;
+    font-size: $font-size-md;
+    font-weight: $font-weight-semibold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10rpx;
+
+    &Secondary {
+      background: $color-bg-page;
+      color: $color-text-secondary;
+      border: 2rpx solid $color-border;
+    }
+
+    &Primary {
+      background: linear-gradient(135deg, $color-primary 0%, $color-primary-light 100%);
+      color: $color-text-white;
+      border: none;
+      box-shadow: 0 8rpx 24rpx rgba(155, 81, 224, 0.25);
+    }
+
+    &Success {
+      background: linear-gradient(135deg, $color-commission 0%, #2ECC71 100%);
+      color: $color-text-white;
+      border: none;
+      box-shadow: 0 8rpx 24rpx rgba(39, 174, 96, 0.25);
+    }
+
+    &:active {
+      opacity: 0.9;
+      transform: scale(0.98);
+    }
+  }
+}

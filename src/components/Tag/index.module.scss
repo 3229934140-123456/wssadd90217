@@ -1,0 +1,48 @@
+@use '@/styles/variables.scss' as *;
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4rpx 16rpx;
+  border-radius: $radius-sm;
+  font-size: $font-size-xs;
+  line-height: 1.6;
+  white-space: nowrap;
+
+  &Primary {
+    background: $color-bg-primary-light;
+    color: $color-primary;
+    border: 1px solid $color-border-primary;
+  }
+
+  &Success {
+    background: $color-commission-bg;
+    color: $color-commission;
+  }
+
+  &Warning {
+    background: rgba(242, 201, 76, 0.15);
+    color: #B7950B;
+  }
+
+  &Error {
+    background: $color-refund-bg;
+    color: $color-refund;
+  }
+
+  &Info {
+    background: rgba(47, 128, 237, 0.1);
+    color: $color-info;
+  }
+
+  &Default {
+    background: rgba(134, 144, 156, 0.1);
+    color: $color-text-tertiary;
+  }
+
+  &Outline {
+    background: transparent;
+    border: 1px solid $color-border;
+    color: $color-text-secondary;
+  }
+}

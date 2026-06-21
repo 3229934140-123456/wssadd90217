@@ -1,0 +1,35 @@
+@use '@/styles/variables.scss' as *;
+
+.empty {
+  padding: 80rpx 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  &Icon {
+    width: 160rpx;
+    height: 160rpx;
+    border-radius: $radius-round;
+    background: $color-bg-primary-light;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: $spacing-lg;
+    font-size: 72rpx;
+  }
+
+  &Text {
+    font-size: $font-size-md;
+    color: $color-text-tertiary;
+    text-align: center;
+    line-height: $line-height-normal;
+  }
+
+  &Title {
+    font-size: $font-size-lg;
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary;
+    margin-bottom: $spacing-sm;
+  }
+}
