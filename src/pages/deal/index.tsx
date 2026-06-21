@@ -134,9 +134,10 @@ const DealPage: React.FC = () => {
     if (!editingRecord) return null
     const inputTotal = parseFloat(editTotalAmount) || 0
     const addPay = parseFloat(editAddPayment) || 0
-    const newPaid = editingRecord.paidAmount + addPay
-    const total = Math.max(inputTotal, newPaid)
-    const newRemaining = total - newPaid
+    const rawPaid = editingRecord.paidAmount + addPay
+    const newPaid = Math.min(rawPaid, Math.max(0, inputTotal))
+    const total = Math.max(0, inputTotal)
+    const newRemaining = Math.max(0, total - newPaid)
     const infId = editChannel === 'influencer' ? editInfluencerId : ''
     const rate = getCommissionRate(infId, editingRecord.visitType)
     const commission = Math.round(newPaid * rate * 100) / 100
@@ -341,15 +342,21 @@ const DealPage: React.FC = () => {
               <View className={styles.row}>
                 <View className={styles.label}>获客渠道</View>
                 <View className={styles.value}>
-                  {customer?.attribution?.channel
-                    ? getSourceChannelName(customer.attribution.channel)
-                    : record.influencerName ? '达人探店' : '未设置'}
+                  {getSourceChannelName(
+                    customer?.attribution?.channel ||
+                    customer?.source ||
+                    (record.influencerId ? 'influencer' : 'walkin')
+                  )}
                 </View>
               </View>
               <View className={styles.row}>
                 <View className={styles.label}>关联达人</View>
                 <View className={classNames(styles.value, styles.influencer)}>
-                  {record.influencerName || influencer?.name || '未关联'}
+                  {(customer?.attribution?.channel === 'influencer' || customer?.source === 'influencer')
+                    ? (record.influencerName || influencer?.name || '未关联')
+                    : (customer?.attribution?.channel === 'feed' || customer?.source === 'feed'
+                        ? '（信息流渠道无达人）'
+                        : '（自然到院无达人）')}
                 </View>
               </View>
               <View className={styles.row}>
@@ -357,7 +364,9 @@ const DealPage: React.FC = () => {
                 <View className={styles.value}>
                   {influencer
                     ? `首诊${formatRate(influencer.commissionRateFirst)} / 二诊${formatRate(influencer.commissionRateSecond)}`
-                    : '-'}
+                    : (customer?.attribution?.channel === 'influencer' || customer?.source === 'influencer'
+                        ? '-'
+                        : '非达人渠道无佣金')}
                 </View>
               </View>
               {customer?.attributionReason && (

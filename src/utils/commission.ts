@@ -41,13 +41,13 @@ export const recalculateCommissionAfterRefund = (
   originalCommission: number,
   refundData: RefundRecord[] | number,
   influencerId: string,
-  visitType?: 'first' | 'second' | 'followup'
+  visitType: 'first' | 'second' | 'followup' = 'second'
 ): number => {
   let totalRefundCommission = 0
   if (typeof refundData === 'number') {
-    const rate = influencerId ? (getInfluencerById(influencerId)?.commissionRateSecond || 0.1) : 0.1
+    const rate = getCommissionRate(influencerId, visitType)
     totalRefundCommission = refundData * rate
-  } else if (Array.isArray(refundData) && refundData.length > 0 && visitType) {
+  } else if (Array.isArray(refundData) && refundData.length > 0) {
     totalRefundCommission = refundData.reduce((sum, ref) => {
       return sum + calculateCommissionAmount(ref.refundAmount, influencerId, visitType)
     }, 0)

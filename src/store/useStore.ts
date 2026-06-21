@@ -6,7 +6,7 @@ import { sourceCodes, getCodeByCode, getCodeById, getActiveCodes, getCodesByInfl
 import { influencers, getInfluencerById, getInfluencerByName } from '@/data/influencers'
 import { projects } from '@/data/projects'
 import { Customer, ConsultationRecord, CommissionRecord, SourceCode, Influencer, Project, AttributionResult, RefundRecord } from '@/types'
-import { calculateCommissionAmount, generateCommissionRecord, recalculateCommissionAfterRefund } from '@/utils/commission'
+import { calculateCommissionAmount, generateCommissionRecord, recalculateCommissionAfterRefund, getCommissionRate, getVisitTypeName } from '@/utils/commission'
 
 interface StoreState {
   customers: Customer[]
@@ -136,12 +136,22 @@ export const useStore = create<StoreState>((set, get) => ({
 
     const isDealConfirmed = target.dealStatus === 'dealed' || target.dealStatus === 'partly_paid'
 
-    if (!isDealConfirmed) {
+    if (!isDealConfirmed || !target.influencerId || target.paidAmount <= 0) {
       set(state => ({
         commissions: state.commissions.filter(c => c.consultationId !== consultationId)
       }))
       return
     }
+
+    const rate = getCommissionRate(target.influencerId, target.visitType)
+    const baseCommission = calculateCommissionAmount(target.paidAmount, target.influencerId, target.visitType)
+    const hasRefund = target.refundRecords.length > 0
+    const finalCommission = hasRefund
+      ? recalculateCommissionAfterRefund(baseCommission, target.refundRecords, target.influencerId, target.visitType)
+      : baseCommission
+    const refundAdjustAmount = baseCommission - finalCommission
+    const status = hasRefund ? 'adjusted' : (target.dealStatus === 'dealed' ? 'confirmed' : 'pending')
+    const statusName = hasRefund ? '已调整' : (target.dealStatus === 'dealed' ? '已确认' : '待确认')
 
     const existing = commissions.find(c => c.consultationId === consultationId)
     if (existing) {
@@ -150,22 +160,46 @@ export const useStore = create<StoreState>((set, get) => ({
           if (c.consultationId !== consultationId) return c
           return {
             ...c,
+            influencerId: target.influencerId || '',
+            influencerName: target.influencerName || '',
+            visitType: target.visitType,
+            visitTypeName: getVisitTypeName(target.visitType),
+            dealDate: target.date,
             dealAmount: target.paidAmount,
-            commissionAmount: target.commissionFinal || 0,
-            hasRefund: target.refundRecords.length > 0,
-            refundAdjustAmount: target.refundRecords.reduce((s, r) => s + r.refundAmount, 0),
-            finalCommission: target.commissionFinal || 0,
+            commissionRate: rate,
+            commissionAmount: baseCommission,
+            hasRefund,
+            refundAdjustAmount,
+            finalCommission,
             isGift: target.hasGift,
-            status: target.dealStatus === 'dealed' ? 'confirmed' : 'pending',
-            statusName: target.dealStatus === 'dealed' ? '已确认' : '待确认'
+            status,
+            statusName
           }
         })
       }))
     } else {
-      const newRecord = generateCommissionRecord(target)
-      if (newRecord) {
-        set(state => ({ commissions: [...state.commissions, newRecord] }))
+      const newRecord: CommissionRecord = {
+        id: 'com_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+        consultationId: target.id,
+        customerId: target.customerId,
+        customerName: target.customerName,
+        influencerId: target.influencerId || '',
+        influencerName: target.influencerName || '',
+        visitType: target.visitType,
+        visitTypeName: getVisitTypeName(target.visitType),
+        dealDate: target.date,
+        dealAmount: target.paidAmount,
+        commissionRate: rate,
+        commissionAmount: baseCommission,
+        status,
+        statusName,
+        isGift: target.hasGift,
+        hasRefund,
+        refundAdjustAmount,
+        finalCommission,
+        notes: target.notes || ''
       }
+      set(state => ({ commissions: [...state.commissions, newRecord] }))
     }
   },
 
@@ -193,7 +227,7 @@ export const useStore = create<StoreState>((set, get) => ({
           : 0
         const totalRefund = c.refundRecords.reduce((s, r) => s + r.refundAmount, 0)
         const baseCommission = commissionFirst + commissionSecond
-        const commissionFinal = recalculateCommissionAfterRefund(baseCommission, totalRefund, influencerId)
+        const commissionFinal = recalculateCommissionAfterRefund(baseCommission, totalRefund, influencerId, c.visitType)
         return { ...c, commissionFirst, commissionSecond, commissionFinal }
       })
       return { consultations }
@@ -220,7 +254,7 @@ export const useStore = create<StoreState>((set, get) => ({
           : 0
         const totalRefund = c.refundRecords.reduce((s, r) => s + r.refundAmount, 0)
         const baseCommission = commissionFirst + commissionSecond
-        const commissionFinal = recalculateCommissionAfterRefund(baseCommission, totalRefund, influencerId)
+        const commissionFinal = recalculateCommissionAfterRefund(baseCommission, totalRefund, influencerId, c.visitType)
         return {
           ...c,
           paidAmount: newPaidAmount,
@@ -266,7 +300,7 @@ export const useStore = create<StoreState>((set, get) => ({
           ? calculateCommissionAmount(newPaid, influencerId, 'second')
           : 0
         const baseCommission = commissionFirst + commissionSecond
-        const commissionFinal = recalculateCommissionAfterRefund(baseCommission, totalRefund, influencerId)
+        const commissionFinal = recalculateCommissionAfterRefund(baseCommission, totalRefund, influencerId, c.visitType)
         return {
           ...c,
           paidAmount: newPaid,
@@ -286,21 +320,22 @@ export const useStore = create<StoreState>((set, get) => ({
     set(state => {
       const consultations = state.consultations.map(c => {
         if (c.id !== consultationId) return c
-        const actualTotal = Math.max(newTotal, c.paidAmount)
-        const newRemaining = actualTotal - c.paidAmount
+        const effectivePaid = Math.min(c.paidAmount, Math.max(0, newTotal))
+        const newRemaining = Math.max(0, newTotal - effectivePaid)
         const influencerId = c.influencerId || ''
         const commissionFirst = c.visitType === 'first'
-          ? calculateCommissionAmount(c.paidAmount, influencerId, 'first')
+          ? calculateCommissionAmount(effectivePaid, influencerId, 'first')
           : 0
         const commissionSecond = c.visitType !== 'first'
-          ? calculateCommissionAmount(c.paidAmount, influencerId, 'second')
+          ? calculateCommissionAmount(effectivePaid, influencerId, 'second')
           : 0
         const totalRefund = c.refundRecords.reduce((s, r) => s + r.refundAmount, 0)
         const baseCommission = commissionFirst + commissionSecond
-        const commissionFinal = recalculateCommissionAfterRefund(baseCommission, totalRefund, influencerId)
+        const commissionFinal = recalculateCommissionAfterRefund(baseCommission, totalRefund, influencerId, c.visitType)
         return {
           ...c,
-          totalAmount: actualTotal,
+          totalAmount: Math.max(0, newTotal),
+          paidAmount: effectivePaid,
           remainingAmount: newRemaining,
           commissionFirst,
           commissionSecond,

@@ -29,7 +29,7 @@ const CommissionPage: React.FC = () => {
     const totalRefund = cons.refundRecords.reduce((s, r) => s + r.refundAmount, 0)
     const reasons = cons.refundRecords.map(r => r.reason).join('、')
     const origCommission = record.commissionAmount
-    const adjustAmount = origCommission - record.finalCommission
+    const adjustAmount = record.refundAdjustAmount > 0 ? record.refundAdjustAmount : (origCommission - record.finalCommission)
     return { totalRefund, reasons, origCommission, adjustAmount }
   }
 
@@ -48,7 +48,7 @@ const CommissionPage: React.FC = () => {
     {
       key: 'adjusted',
       label: '已调整(退款)',
-      count: commissions.filter(c => c.status === 'adjusted' || c.hasRefund).length
+      count: commissions.filter(c => c.status === 'adjusted').length
     }
   ]
 
@@ -67,7 +67,7 @@ const CommissionPage: React.FC = () => {
     } else if (activeTab === 'second') {
       list = list.filter(c => c.visitType !== 'first')
     } else if (activeTab === 'adjusted') {
-      list = list.filter(c => c.status === 'adjusted' || c.hasRefund)
+      list = list.filter(c => c.status === 'adjusted')
     }
     if (activeFilter !== 'all') {
       list = list.filter(c => c.status === activeFilter)
@@ -83,7 +83,7 @@ const CommissionPage: React.FC = () => {
     .filter(c => c.visitType !== 'first')
     .reduce((sum, c) => sum + c.finalCommission, 0)
   const pendingCount = commissions.filter(c => c.status === 'pending').length
-  const adjustedCount = commissions.filter(c => c.status === 'adjusted' || c.hasRefund).length
+  const adjustedCount = commissions.filter(c => c.status === 'adjusted').length
 
   const handleExport = () => {
     Taro.showModal({
@@ -180,7 +180,7 @@ const CommissionPage: React.FC = () => {
             filteredList.map(record => {
               const influencer = getInfluencerById(record.influencerId)
               const refundInfo = getRefundInfo(record)
-              const isAdjusted = record.status === 'adjusted' || record.hasRefund
+              const isAdjusted = record.status === 'adjusted'
               return (
                 <View key={record.id} className={classnames(styles.commissionCard, isAdjusted && styles.commissionCardAdjusted)}>
                   <View className={styles.commissionCardHeader}>
