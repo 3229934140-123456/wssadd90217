@@ -9,11 +9,12 @@ interface PageCardProps {
   children: ReactNode
   footer?: ReactNode
   className?: string
+  style?: React.CSSProperties
 }
 
-const PageCard: React.FC<PageCardProps> = ({ title, extra, children, footer, className }) => {
+const PageCard: React.FC<PageCardProps> = ({ title, extra, children, footer, className, style }) => {
   return (
-    <View className={classnames(styles.pageCard, className)}>
+    <View className={classnames(styles.pageCard, className)} style={style}>
       {(title || extra) && (
         <View className={styles.pageCardHeader}>
           {title && <Text className={styles.title}>{title}</Text>}

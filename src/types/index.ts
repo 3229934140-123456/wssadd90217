@@ -67,7 +67,7 @@ export interface ConsultationRecord {
   time: string
   interestedProjects: string[]
   interestedProjectNames: string[]
-  dealStatus: 'pending' | 'dealed' | 'not_dealed' | 'partly_paid'
+  dealStatus: 'pending' | 'to_verify' | 'dealed' | 'not_dealed' | 'partly_paid'
   totalAmount: number
   paidAmount: number
   remainingAmount: number

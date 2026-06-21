@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useEffect } from 'react'
-import { View, Text, ScrollView, Input, Image } from '@tarojs/components'
+import React, { useState, useEffect, useMemo } from 'react'
+import { View, Text, ScrollView, Input, Image, Picker } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import classNames from 'classnames'
 import { useStore } from '@/store/useStore'
@@ -10,37 +10,44 @@ import { getInfluencerById } from '@/data/influencers'
 import styles from './index.module.scss'
 
 type TabType = 'pending' | 'verified'
+type PanelType = 'edit' | 'refund' | null
 
 const DealPage: React.FC = () => {
   const {
     consultations,
     customers,
     pendingDealConsultationId,
-    setPendingDealConsultationId,
     updateConsultation,
     addInstallment,
+    addRefund,
     confirmDeal,
-    toggleGift
+    toggleGift,
+    updateTotalAmount
   } = useStore()
 
   const [activeTab, setActiveTab] = useState<TabType>('pending')
-  const [showEditPanel, setShowEditPanel] = useState(false)
+  const [panelType, setPanelType] = useState<PanelType>(null)
   const [editingRecord, setEditingRecord] = useState<ConsultationRecord | null>(null)
 
   const [editProjects, setEditProjects] = useState<string[]>([])
   const [editTotalAmount, setEditTotalAmount] = useState('')
-  const [editPaidAmount, setEditPaidAmount] = useState('')
+  const [editAddPayment, setEditAddPayment] = useState('')
   const [editPayMethod, setEditPayMethod] = useState('微信支付')
   const [editIsGift, setEditIsGift] = useState(false)
   const [editGiftProjects, setEditGiftProjects] = useState<string[]>([])
+
+  const [refundProject, setRefundProject] = useState('')
+  const [refundAmount, setRefundAmount] = useState('')
+  const [refundReason, setRefundReason] = useState('')
+  const [refundOriginal, setRefundOriginal] = useState('')
 
   const { pendingList, verifiedList, stats } = useMemo(() => {
     const pending: ConsultationRecord[] = []
     const verified: ConsultationRecord[] = []
     consultations.forEach(c => {
-      if (c.dealStatus === 'pending' || c.dealStatus === 'not_dealed') {
+      if (c.dealStatus === 'to_verify') {
         pending.push(c)
-      } else {
+      } else if (c.dealStatus === 'dealed' || c.dealStatus === 'partly_paid') {
         verified.push(c)
       }
     })
@@ -62,7 +69,7 @@ const DealPage: React.FC = () => {
       const target = consultations.find(c => c.id === pendingDealConsultationId)
       if (target) {
         setActiveTab('pending')
-        setTimeout(() => openEditPanel(target), 300)
+        setTimeout(() => openEditPanel(target), 200)
       }
     }
   }, [pendingDealConsultationId, consultations])
@@ -71,15 +78,24 @@ const DealPage: React.FC = () => {
     setEditingRecord(record)
     setEditProjects([...record.interestedProjects])
     setEditTotalAmount(String(record.totalAmount || 0))
-    setEditPaidAmount('')
+    setEditAddPayment('')
     setEditPayMethod('微信支付')
     setEditIsGift(record.hasGift || false)
     setEditGiftProjects([...record.giftProjectNames])
-    setShowEditPanel(true)
+    setPanelType('edit')
   }
 
-  const closeEditPanel = () => {
-    setShowEditPanel(false)
+  const openRefundPanel = (record: ConsultationRecord) => {
+    setEditingRecord(record)
+    setRefundProject(record.interestedProjectNames[0] || '')
+    setRefundOriginal(record.interestedProjectNames[0] || '')
+    setRefundAmount('')
+    setRefundReason('')
+    setPanelType('refund')
+  }
+
+  const closePanel = () => {
+    setPanelType(null)
     setEditingRecord(null)
   }
 
@@ -100,52 +116,85 @@ const DealPage: React.FC = () => {
   }
 
   const getCustomerAttribution = (customerId: string) => {
-    const customer = customers.find(c => c.id === customerId)
-    return customer
+    return customers.find(c => c.id === customerId)
   }
 
-  const handleSave = () => {
+  const livePreview = useMemo(() => {
+    if (!editingRecord) return null
+    const total = parseFloat(editTotalAmount) || 0
+    const addPay = parseFloat(editAddPayment) || 0
+    const newPaid = editingRecord.paidAmount + addPay
+    const newRemaining = Math.max(0, total - newPaid)
+    const rate = getCommissionRate(editingRecord.influencerId || '', editingRecord.visitType)
+    const commission = Math.round(newPaid * rate * 100) / 100
+    return { total, addPay, newPaid, newRemaining, rate, commission }
+  }, [editingRecord, editTotalAmount, editAddPayment])
+
+  const handleSaveEdit = () => {
     if (!editingRecord) return
     const newTotal = parseFloat(editTotalAmount) || 0
-    const newPaid = parseFloat(editPaidAmount) || 0
+    const addPay = parseFloat(editAddPayment) || 0
     const projectNames = getProjectsByIds(editProjects).map(p => p.name)
-    const influencer = getInfluencerById(editingRecord.influencerId || '')
-    const rate = influencer
-      ? (editingRecord.visitType === 'first' ? influencer.commissionRateFirst : influencer.commissionRateSecond)
-      : 0
 
     updateConsultation(editingRecord.id, {
       interestedProjects: editProjects,
-      interestedProjectNames: projectNames,
-      totalAmount: newTotal
+      interestedProjectNames: projectNames
     })
 
-    if (newPaid > 0) {
-      addInstallment(editingRecord.id, newPaid, editPayMethod)
+    updateTotalAmount(editingRecord.id, newTotal)
+
+    if (addPay > 0) {
+      addInstallment(editingRecord.id, addPay, editPayMethod)
     }
 
     toggleGift(editingRecord.id, editIsGift, editGiftProjects)
 
-    Taro.showToast({ title: '信息已更新', icon: 'success' })
-    closeEditPanel()
+    Taro.showToast({ title: '修改已保存', icon: 'success' })
+    closePanel()
   }
 
-  const handleVerifyAndSave = () => {
+  const handleVerifyConfirm = () => {
     if (!editingRecord) return
-    handleSave()
+    handleSaveEdit()
     setTimeout(() => {
-      confirmDeal(editingRecord.id, true)
+      confirmDeal(editingRecord.id)
       Taro.showToast({ title: '成交确认成功', icon: 'success' })
       setTimeout(() => {
         Taro.switchTab({ url: '/pages/commission/index' })
       }, 800)
-    }, 400)
+    }, 300)
+  }
+
+  const handleRefundSave = () => {
+    if (!editingRecord) return
+    const amount = parseFloat(refundAmount) || 0
+    if (amount <= 0) {
+      Taro.showToast({ title: '请输入退款金额', icon: 'none' })
+      return
+    }
+    if (!refundReason.trim()) {
+      Taro.showToast({ title: '请填写退款原因', icon: 'none' })
+      return
+    }
+    if (amount > editingRecord.paidAmount) {
+      Taro.showToast({ title: '退款金额不能大于已收款', icon: 'none' })
+      return
+    }
+    addRefund(editingRecord.id, {
+      originalProject: refundOriginal,
+      newProject: refundProject !== refundOriginal ? refundProject : undefined,
+      amount: 0,
+      refundAmount: amount,
+      reason: refundReason
+    })
+    Taro.showToast({ title: '退款已登记，佣金已重算', icon: 'success' })
+    closePanel()
   }
 
   const listData = activeTab === 'pending' ? pendingList : verifiedList
 
   const renderDealCard = (record: ConsultationRecord) => {
-    const isVerified = record.dealStatus !== 'pending' && record.dealStatus !== 'not_dealed'
+    const isVerified = record.dealStatus !== 'to_verify'
     const customer = getCustomerAttribution(record.customerId)
     const influencer = getInfluencerById(record.influencerId || '')
     const rate = getCommissionRate(record.influencerId || '', record.visitType)
@@ -159,7 +208,7 @@ const DealPage: React.FC = () => {
           <View className={styles.customerInfo}>
             <View className={styles.name}>
               👤 {record.customerName}
-              <Text style={{ fontSize: '22rpx', color: '#86909C', marginLeft: '12rpx', fontWeight: 'normal' }}>
+              <Text style={{ fontSize: 24, color: '#86909C', marginLeft: 12, fontWeight: 'normal' }}>
                 {record.phoneLast4 && `****${record.phoneLast4}`}
               </Text>
             </View>
@@ -168,7 +217,7 @@ const DealPage: React.FC = () => {
             </View>
           </View>
           <View className={classNames(styles.statusBadge, { [styles.statusBadgeVerified]: isVerified })}>
-            {isVerified ? '✅ 已确认' : '⏰ 待核对'}
+            {record.dealStatus === 'to_verify' ? '⏰ 待核对' : record.dealStatus === 'partly_paid' ? '💳 分期中' : '✅ 已成交'}
           </View>
         </View>
 
@@ -243,6 +292,23 @@ const DealPage: React.FC = () => {
             </View>
           )}
 
+          {record.refundRecords && record.refundRecords.length > 0 && (
+            <View className={styles.sectionBlock}>
+              <View className={styles.sectionLabel}>↩️ 退款记录（{record.refundRecords.length}笔）</View>
+              <View className={styles.paymentList}>
+                {record.refundRecords.map(ref => (
+                  <View key={ref.id} className={styles.paymentItem}>
+                    <View>
+                      <View className={styles.method} style={{ color: '#EB5757' }}>{ref.originalProject} 退款</View>
+                      <View className={styles.date}>{ref.date} · 原因：{ref.reason}</View>
+                    </View>
+                    <View className={styles.amount} style={{ color: '#EB5757' }}>-{formatAmount(ref.refundAmount)}</View>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+
           <View className={styles.sectionBlock}>
             <View className={styles.sectionLabel}>🎯 归因信息</View>
             <View className={styles.attributionBox}>
@@ -282,6 +348,12 @@ const DealPage: React.FC = () => {
             <>
               <View
                 className={classNames(styles.btn, styles.btnOutline)}
+                onClick={() => openRefundPanel(record)}
+              >
+                ↩️ 退款
+              </View>
+              <View
+                className={classNames(styles.btn, styles.btnOutline)}
                 onClick={() => openEditPanel(record)}
               >
                 ✏️ 修改信息
@@ -299,9 +371,15 @@ const DealPage: React.FC = () => {
             <>
               <View
                 className={classNames(styles.btn, styles.btnSecondary)}
+                onClick={() => openRefundPanel(record)}
+              >
+                ↩️ 退款
+              </View>
+              <View
+                className={classNames(styles.btn, styles.btnOutline)}
                 onClick={() => openEditPanel(record)}
               >
-                👁️ 查看详情
+                ✏️ 追加/修改
               </View>
               <View
                 className={classNames(styles.btn, styles.btnPrimary)}
@@ -321,11 +399,11 @@ const DealPage: React.FC = () => {
       <View className={styles.statsRow}>
         <View className={styles.statCard}>
           <View className={styles.num}>{stats.total}</View>
-          <View className={styles.label}>总数</View>
+          <View className={styles.label}>面诊总数</View>
         </View>
         <View className={classNames(styles.statCard, styles.statCardThird)}>
           <View className={styles.num}>{stats.pending}</View>
-          <View className={styles.label}>待确认</View>
+          <View className={styles.label}>待核对</View>
         </View>
         <View className={classNames(styles.statCard, styles.statCardSecond)}>
           <View className={styles.num}>{stats.verified}</View>
@@ -342,7 +420,7 @@ const DealPage: React.FC = () => {
           className={classNames(styles.tab, { [styles.tabActive]: activeTab === 'pending' })}
           onClick={() => setActiveTab('pending')}
         >
-          ⏰ 待确认
+          ⏰ 待核对
           {pendingList.length > 0 && <View className={styles.badge}>{pendingList.length}</View>}
         </View>
         <View
@@ -357,22 +435,22 @@ const DealPage: React.FC = () => {
         {listData.length === 0 ? (
           <View className={styles.emptyHint}>
             <View className={styles.emoji}>{activeTab === 'pending' ? '🎉' : '📝'}</View>
-            <View>{activeTab === 'pending' ? '暂无待确认的成交，做得很好！' : '还没有已确认的成交'}</View>
+            <View>{activeTab === 'pending' ? '暂无待核对的成交，做得很好！' : '还没有已确认的成交记录'}</View>
           </View>
         ) : (
           listData.map(renderDealCard)
         )}
       </ScrollView>
 
-      {showEditPanel && editingRecord && (
+      {panelType === 'edit' && editingRecord && (
         <>
-          <View className={styles.mask} onClick={closeEditPanel} />
+          <View className={styles.mask} onClick={closePanel} />
           <View className={styles.editPanel}>
             <View className={styles.editPanelHeader}>
               <View className={styles.title}>
-                {activeTab === 'pending' ? '✅ 成交核对确认' : '✏️ 编辑成交信息'}
+                ✏️ 核对成交信息
               </View>
-              <View className={styles.close} onClick={closeEditPanel}>✕</View>
+              <View className={styles.close} onClick={closePanel}>✕</View>
             </View>
 
             <ScrollView className={styles.editPanelBody} scrollY>
@@ -391,7 +469,7 @@ const DealPage: React.FC = () => {
                     >
                       {editProjects.includes(p.id) && '✓ '}
                       {p.name}
-                      <Text style={{ fontSize: '20rpx', opacity: 0.7, marginLeft: '6rpx' }}>
+                      <Text style={{ fontSize: 20, opacity: 0.7, marginLeft: 6 }}>
                         {formatAmount(p.price)}
                       </Text>
                     </View>
@@ -401,7 +479,7 @@ const DealPage: React.FC = () => {
 
               <View className={styles.formGroup}>
                 <View className={styles.formLabel}>🎁 赠送项目设置</View>
-                <View style={{ marginBottom: '16rpx' }}>
+                <View style={{ marginBottom: 16 }}>
                   <View
                     className={classNames(styles.projectCheck, {
                       [styles.projectCheckChecked]: editIsGift
@@ -445,19 +523,19 @@ const DealPage: React.FC = () => {
                     />
                   </View>
                   <View className={styles.inputItem}>
-                    <View className={styles.inputLabel}>本次收款金额（元）</View>
+                    <View className={styles.inputLabel}>本次追加收款（元）</View>
                     <Input
                       className={styles.input}
                       type='digit'
-                      value={editPaidAmount}
-                      onInput={(e) => setEditPaidAmount(e.detail.value)}
+                      value={editAddPayment}
+                      onInput={(e) => setEditAddPayment(e.detail.value)}
                       placeholder='0表示不追加'
                     />
                   </View>
                 </View>
               </View>
 
-              {parseFloat(editPaidAmount || '0') > 0 && (
+              {parseFloat(editAddPayment || '0') > 0 && (
                 <View className={styles.formGroup}>
                   <View className={classNames(styles.formLabel, styles.required)}>💳 选择付款方式</View>
                   <View className={styles.methodList}>
@@ -476,42 +554,161 @@ const DealPage: React.FC = () => {
                 </View>
               )}
 
-              <View className={styles.formGroup}>
-                <View className={styles.formLabel}>📊 佣金预估预览</View>
-                <View style={{ padding: '24rpx', background: 'rgba(39, 174, 96, 0.08)', borderRadius: '16rpx' }}>
-                  <View style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12rpx' }}>
-                    <Text style={{ fontSize: '24rpx', color: '#4E5969' }}>
-                      佣金基数：已付 {formatAmount(parseFloat(editPaidAmount || '0') + editingRecord.paidAmount)}
-                    </Text>
-                    <Text style={{ fontSize: '24rpx', color: '#4E5969' }}>
-                      比例 {formatRate(getCommissionRate(editingRecord.influencerId || '', editingRecord.visitType))}
-                    </Text>
-                  </View>
-                  <View style={{ fontSize: '36rpx', fontWeight: 'bold', color: '#27AE60' }}>
-                    预估佣金 = {formatAmount(
-                      (parseFloat(editPaidAmount || '0') + editingRecord.paidAmount) *
-                      getCommissionRate(editingRecord.influencerId || '', editingRecord.visitType)
-                    )}
+              {livePreview && (
+                <View className={styles.formGroup}>
+                  <View className={styles.formLabel}>📊 实时预览</View>
+                  <View style={{ padding: 24, background: 'rgba(39, 174, 96, 0.08)', borderRadius: 16 }}>
+                    <View style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+                      <Text style={{ fontSize: 24, color: '#4E5969' }}>
+                        总金额：{formatAmount(livePreview.total)}
+                      </Text>
+                      <Text style={{ fontSize: 24, color: '#4E5969' }}>
+                        已付：{formatAmount(livePreview.newPaid)}
+                      </Text>
+                    </View>
+                    <View style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+                      <Text style={{ fontSize: 24, color: '#F2994A' }}>
+                        待付：{formatAmount(livePreview.newRemaining)}
+                      </Text>
+                      <Text style={{ fontSize: 24, color: '#4E5969' }}>
+                        比例：{formatRate(livePreview.rate)}
+                      </Text>
+                    </View>
+                    <View style={{ fontSize: 36, fontWeight: 'bold', color: '#27AE60' }}>
+                      预估佣金 = {formatAmount(livePreview.commission)}
+                    </View>
                   </View>
                 </View>
+              )}
+            </ScrollView>
+
+            <View className={styles.editPanelFooter}>
+              <View className={classNames(styles.panelBtn, styles.panelBtnSecondary)} onClick={closePanel}>
+                取消
+              </View>
+              <View className={classNames(styles.panelBtn, styles.panelBtnPrimary)} onClick={handleSaveEdit}>
+                💾 保存修改
+              </View>
+              <View
+                className={classNames(styles.panelBtn, styles.panelBtnPrimary)}
+                style={{ background: 'linear-gradient(135deg, #27AE60 0%, #2ECC71 100%)' }}
+                onClick={handleVerifyConfirm}
+              >
+                ✅ 确认成交
+              </View>
+            </View>
+          </View>
+        </>
+      )}
+
+      {panelType === 'refund' && editingRecord && (
+        <>
+          <View className={styles.mask} onClick={closePanel} />
+          <View className={styles.editPanel}>
+            <View className={styles.editPanelHeader}>
+              <View className={styles.title}>
+                ↩️ 退款登记
+              </View>
+              <View className={styles.close} onClick={closePanel}>✕</View>
+            </View>
+
+            <ScrollView className={styles.editPanelBody} scrollY>
+              <View className={styles.formGroup}>
+                <View className={styles.formLabel}>👤 当前顾客</View>
+                <View style={{ padding: 20, background: '#F7F8FA', borderRadius: 12 }}>
+                  <Text style={{ fontSize: 28, fontWeight: 600, color: '#1D2129' }}>
+                    {editingRecord.customerName} · ****{editingRecord.phoneLast4}
+                  </Text>
+                  <Text style={{ fontSize: 24, color: '#86909C', marginTop: 8, display: 'block' }}>
+                    已收款 {formatAmount(editingRecord.paidAmount)} · 预估佣金 {formatAmount(editingRecord.commissionFinal || 0)}
+                  </Text>
+                </View>
+              </View>
+
+              <View className={styles.formGroup}>
+                <View className={classNames(styles.formLabel, styles.required)}>💼 原项目</View>
+                <View className={styles.projectCheckList}>
+                  {editingRecord.interestedProjectNames.map(name => (
+                    <View
+                      key={name}
+                      className={classNames(styles.projectCheck, {
+                        [styles.projectCheckChecked]: refundOriginal === name
+                      })}
+                      onClick={() => { setRefundOriginal(name); setRefundProject(name) }}
+                    >
+                      {refundOriginal === name && '✓ '}
+                      {name}
+                    </View>
+                  ))}
+                </View>
+              </View>
+
+              <View className={styles.formGroup}>
+                <View className={styles.formLabel}>🔄 改项目（可选，不改为空）</View>
+                <View className={styles.projectCheckList}>
+                  {editingRecord.interestedProjectNames
+                    .filter(n => n !== refundOriginal)
+                    .map(name => (
+                    <View
+                      key={name}
+                      className={classNames(styles.projectCheck, {
+                        [styles.projectCheckChecked]: refundProject === name && name !== refundOriginal
+                      })}
+                      onClick={() => setRefundProject(name)}
+                    >
+                      {refundProject === name && name !== refundOriginal && '✓ '}
+                      {name}
+                    </View>
+                  ))}
+                  <View
+                    className={classNames(styles.projectCheck, {
+                      [styles.projectCheckChecked]: refundProject === ''
+                    })}
+                    onClick={() => setRefundProject('')}
+                  >
+                    {refundProject === '' && '✓ '}
+                    不更换
+                  </View>
+                </View>
+              </View>
+
+              <View className={styles.formGroup}>
+                <View className={classNames(styles.formLabel, styles.required)}>💰 退款金额（元）</View>
+                <Input
+                  className={styles.input}
+                  style={{ width: '100%', height: 88, background: '#F7F8FA', borderRadius: 12, padding: '0 20rpx', fontSize: 32, boxSizing: 'border-box' }}
+                  type='digit'
+                  value={refundAmount}
+                  onInput={(e) => setRefundAmount(e.detail.value)}
+                  placeholder='请输入退款金额'
+                />
+                <Text style={{ fontSize: 22, color: '#86909C', marginTop: 8, display: 'block' }}>
+                  最多可退 {formatAmount(editingRecord.paidAmount)}，退款后佣金将自动重算
+                </Text>
+              </View>
+
+              <View className={styles.formGroup}>
+                <View className={classNames(styles.formLabel, styles.required)}>📝 退款原因</View>
+                <Input
+                  style={{ width: '100%', height: 88, background: '#F7F8FA', borderRadius: 12, padding: '0 20rpx', fontSize: 28, boxSizing: 'border-box' }}
+                  value={refundReason}
+                  onInput={(e) => setRefundReason(e.detail.value)}
+                  placeholder='请填写退款原因（如：顾客不满意、改项目差价等）'
+                />
               </View>
             </ScrollView>
 
             <View className={styles.editPanelFooter}>
-              <View className={classNames(styles.panelBtn, styles.panelBtnSecondary)} onClick={closeEditPanel}>
+              <View className={classNames(styles.panelBtn, styles.panelBtnSecondary)} onClick={closePanel}>
                 取消
               </View>
-              <View className={classNames(styles.panelBtn, styles.panelBtnPrimary)} onClick={handleSave}>
-                💾 保存修改
+              <View
+                className={classNames(styles.panelBtn, styles.panelBtnPrimary)}
+                style={{ background: 'linear-gradient(135deg, #EB5757 0%, #F2994A 100%)' }}
+                onClick={handleRefundSave}
+              >
+                ↩️ 确认退款
               </View>
-              {activeTab === 'pending' && (
-                <View className={classNames(styles.panelBtn, styles.panelBtnPrimary)}
-                  style={{ background: 'linear-gradient(135deg, #27AE60 0%, #2ECC71 100%)' }}
-                  onClick={handleVerifyAndSave}
-                >
-                  ✅ 确认成交
-                </View>
-              )}
             </View>
           </View>
         </>

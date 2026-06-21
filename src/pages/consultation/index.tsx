@@ -21,7 +21,7 @@ import { projects, getPaidProjects } from '@/data/projects'
 type TabType = 'all' | 'pending' | 'dealed' | 'partly'
 
 const ConsultationPage: React.FC = () => {
-  const { consultations, updateConsultation, addInstallment, setPendingDealConsultationId, recalculateConsultationCommission } = useStore()
+  const { consultations, updateConsultation, addInstallment, setPendingDealConsultationId, recalculateConsultationCommission, markToVerify } = useStore()
 
   const [activeTab, setActiveTab] = useState<TabType>('all')
   const [editingRecord, setEditingRecord] = useState<ConsultationRecord | null>(null)
@@ -85,27 +85,27 @@ const ConsultationPage: React.FC = () => {
     updateConsultation(editingRecord.id, {
       interestedProjects: editProjects,
       interestedProjectNames: projectNames,
-      dealStatus: newStatus === 'pending' ? editingRecord.dealStatus : newStatus,
       totalAmount: total,
       notes: editNotes
     })
 
     if (addInst > 0) {
       addInstallment(editingRecord.id, addInst, '咨询师录入')
-    } else {
-      recalculateConsultationCommission(editingRecord.id)
     }
 
-    const needsGoDeal = (newStatus === 'dealed' || newStatus === 'partly_paid') && editingRecord.dealStatus === 'pending'
-    if (needsGoDeal) {
-      setPendingDealConsultationId(editingRecord.id)
-      Taro.showToast({ title: '跳转到成交确认', icon: 'success' })
+    const isMarkingDeal = (newStatus === 'dealed' || newStatus === 'partly_paid') &&
+      (editingRecord.dealStatus === 'pending' || editingRecord.dealStatus === 'to_verify' || editingRecord.dealStatus === 'not_dealed')
+
+    if (isMarkingDeal) {
+      markToVerify(editingRecord.id)
+      Taro.showToast({ title: '请前往成交确认核对', icon: 'none', duration: 1500 })
       setTimeout(() => {
         setShowModal(false)
         setEditingRecord(null)
         Taro.switchTab({ url: '/pages/deal/index' })
-      }, 600)
+      }, 1000)
     } else {
+      recalculateConsultationCommission(editingRecord.id)
       Taro.showToast({ title: '保存成功', icon: 'success' })
       setShowModal(false)
       setEditingRecord(null)
